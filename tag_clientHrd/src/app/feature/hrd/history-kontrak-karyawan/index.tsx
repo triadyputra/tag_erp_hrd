@@ -331,6 +331,20 @@ export default function PageKaryawan() {
               "Nama Karyawan"}
           </Typography>
 
+          <Typography
+            variant="body2"
+            sx={{
+              mt: 0.3,
+              color: '#64748B',
+              fontWeight: 600,
+              letterSpacing: 0.3,
+            }}
+          >
+            NIK : {detail?.Profile?.NIKSISTAG ||
+              selected?.NIKSISTAG ||
+              "-"}
+          </Typography>
+
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
             {detail?.Profile?.NMJABATAN ||
               selected?.NMJABATAN ||

@@ -167,12 +167,19 @@ namespace tagApi.Services.Hrd
                             WHEN hk.PAKHIRFREE IS NOT NULL THEN hk.PAKHIRFREE
                             ELSE NULL
                         END AS ResignDate,
-                        a.NMVENDOR
+                        a.NMVENDOR,
+                        kk.NIKSISTAG
                     FROM HRDTAG.dbo.MST_KTP a
                     LEFT JOIN dbo.TRX_KARYAWANPK pk 
                         ON a.NOKTP COLLATE DATABASE_DEFAULT = pk.NOKTP COLLATE DATABASE_DEFAULT
                     LEFT JOIN dbo.TRX_KARYAWANHK hk 
                         ON a.NOKTP COLLATE DATABASE_DEFAULT = hk.NIKKTP COLLATE DATABASE_DEFAULT
+                    OUTER APPLY (
+                        SELECT TOP 1 *
+                        FROM dbo.TRX_KONTRAKKARYAWAN k
+                        WHERE k.NOKTP COLLATE DATABASE_DEFAULT = a.NOKTP COLLATE DATABASE_DEFAULT
+                        ORDER BY k.PAKHIR DESC
+                    ) kk
                     WHERE a.NOKTP = @cnoktp;
 
                     -- 2. KONTRAK
@@ -180,7 +187,7 @@ namespace tagApi.Services.Hrd
                         a.TGLINPUT, a.NOKONTRAK, a.NIKSISTAG, a.JNSKONTRAK, 
                         a.PAWAL, a.PAKHIR, a.BEGINDATE,
                         a.NMDIVISI, a.NMBAGIAN, a.NMJABATAN, 
-                        a.NMCABANG, a.KETERANGAN, a.NMVENDOR, a.Status
+                        a.NMCABANG, a.KETERANGAN, a.NMVENDOR, a.Status, a.Validuser
                     FROM dbo.web_v_DATAKONTRAK a
                     WHERE a.NOKTP = @cnoktp
                     ORDER BY a.PAKHIR desc;

@@ -221,8 +221,25 @@ export default function KontrakTable({ data = [] }: { data: any[] }) {
                         <Typography fontSize={13} fontWeight={700} lineHeight={1.2}>
                           {formatDate(item.PAWAL)}
                         </Typography>
+
                         <Typography fontSize={11} color="text.secondary">
                           sampai {formatDate(item.PAKHIR)}
+                        </Typography>
+
+                        <Typography
+                          fontSize={11}
+                          fontWeight={600}
+                          mt={0.5}
+                          sx={{
+                            color: '#0F766E',
+                            backgroundColor: '#ECFDF5',
+                            px: 1,
+                            py: 0.3,
+                            borderRadius: 1,
+                            display: 'inline-block',
+                          }}
+                        >
+                          {item.Validuser}
                         </Typography>
                       </Box>
                     </TableCell>

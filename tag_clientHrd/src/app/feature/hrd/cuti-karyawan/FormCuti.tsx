@@ -262,11 +262,14 @@ const FormCutiKaryawan: React.FC<Props> = ({
     const tahun = new Date().getFullYear()
 
     const resKtpRaw = await getDetailMasterKtp(item.NOKTP)
-
+    console.log(resKtpRaw)
     const resKtp = resKtpRaw?.Data ?? resKtpRaw
     const nikSistem = String(
       resKtp?.NIKSISTAG ?? resKtp?.NikSistag ?? resKtp?.nikSistag ?? ''
     ).trim()
+
+    console.log(resKtp)
+    console.log(nikSistem)
     if (!nikSistem) {
       throw new Error('Karyawan sudah keluar')
     }

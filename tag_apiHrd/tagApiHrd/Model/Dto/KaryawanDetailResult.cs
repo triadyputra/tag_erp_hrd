@@ -21,6 +21,7 @@
         public string? FOTO_BASE64 { get; set; } // 🔥 untuk frontend
         public DateTime? ResignDate { get; set; }
         public string? NMVENDOR { get; set; }
+        public string? NIKSISTAG { get; set; }
     }
 
     public class KaryawanKontrak
@@ -39,6 +40,7 @@
         public string? KETERANGAN { get; set; }
         public string? NMVENDOR { get; set; }
         public int Status { get; set; }
+        public string? Validuser { get; set; }
     }
 
     public class KaryawanSP
