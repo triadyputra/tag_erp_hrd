@@ -204,7 +204,7 @@ namespace tagApiHrd.Services.master
         // DELETE
         // ===============================
         public async Task<ApiResponse<object>> DeleteDataKtp(
-            string noktp)
+            string noktp, string kdcabang)
         {
             try
             {
@@ -215,7 +215,7 @@ namespace tagApiHrd.Services.master
                     new DynamicParameters();
 
                 parameters.Add("@cnoktp", noktp);
-                parameters.Add("@ckdcabang", "");
+                parameters.Add("@ckdcabang", kdcabang);
                 parameters.Add("@cvaliduser", "");
 
                 // return value
@@ -226,7 +226,7 @@ namespace tagApiHrd.Services.master
                 );
 
                 await connection.ExecuteAsync(
-                    "dbo.Asp_DeleteDataKTP",
+                    "dbo.Web_Asp_DeleteDataKTP",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 );

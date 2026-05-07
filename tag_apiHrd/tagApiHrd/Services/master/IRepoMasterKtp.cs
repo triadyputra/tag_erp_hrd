@@ -19,6 +19,6 @@ namespace tagApiHrd.Services.master
         FormDataKtpDto dto,
         string validUser);
 
-        Task<ApiResponse<object>> DeleteDataKtp(string noktp);
+        Task<ApiResponse<object>> DeleteDataKtp(string noktp, string kdcabang);
     }
 }

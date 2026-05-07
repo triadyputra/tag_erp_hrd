@@ -388,6 +388,43 @@ export async function checkKasetByKode(kode: string) {
   return json.Data
 }
 
+export function useComboVendorByKode() {
+  const [vendor, setVendor] = useState<ComboItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    async function fetchVendor() {
+      try {
+        const res = await authFetch(`${BASE_URL}Combo/ComboVendor`);
+        const json = await res.json();
+
+        if (active && Array.isArray(json)) {
+          const mapped: ComboItem[] = json.map((x: any) => ({
+            value: x.Id,
+            title: x.Name,
+          }));
+
+          setVendor(mapped);
+        }
+      } catch (err) {
+        console.error("Gagal load combo vendor", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    fetchVendor();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return { vendor, loading };
+}
+
 export function useComboVendorByNama() {
   const [vendor, setVendor] = useState<ComboItem[]>([]);
   const [loading, setLoading] = useState(true);

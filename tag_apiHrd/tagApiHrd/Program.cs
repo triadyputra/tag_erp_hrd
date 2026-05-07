@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using tagApi.Services.Hrd;
 using tagApiHrd.Services.Legal;
+using tagApiHrd.Services.master;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -144,6 +145,8 @@ builder.Services.AddScoped<IRepoHrd, RepoHrd>();
 builder.Services.AddScoped<IRepoPacklaring, RepoPacklaring>();
 
 builder.Services.AddScoped<IRepoPenilaian, RepoPenilaian>();
+
+builder.Services.AddScoped<IRepoMasterKtp, RepoMasterKtp>();
 
 builder.Services.AddHttpContextAccessor();
 

@@ -136,13 +136,15 @@ namespace tagApiHrd.Controllers.Master
         // ===============================
         [HttpDelete("{noktp}")]
         public async Task<IActionResult> DeleteDataKtp(
-            string noktp)
+         string noktp,
+         [FromQuery] string kdcabang)
         {
             try
             {
                 var result =
                     await _repo.DeleteDataKtp(
-                        noktp);
+                        noktp,
+                        kdcabang);
 
                 return Ok(result);
             }

@@ -239,10 +239,65 @@ namespace tagApi.Services.Hrd
             {
                 using var connection = _context.CreateConnection();
 
+                //var sql = @"
+                //    SELECT 
+                //        a.NOKTP,
+                //        a.NAMALENGKAP NMKARYAWAN,
+                //        a.TEMPATLAHIR,
+                //        a.TGLLAHIR,
+                //        a.ALAMAT,
+                //        a.KELAMIN,
+                //        a.PERKAWINAN,
+                //        a.PENDIDIKAN,
+                //        a.AGAMA,
+                //        a.KDCABANG,
+                //        a.NMCABANG,
+                //        b.NIKSISTAG,
+                //        a.IDFINGER,
+                //        ISNULL(a.NMBANK,'BCA') AS NMBANK,
+                //        a.NOREKENING,
+                //        a.NOTELEPON NOHANDPHONE,
+                //        a.TGLMASUK,
+                //        a.FOTO,
+
+                //        b.KDDIVISI,
+                //        b.NMDIVISI,
+                //        b.KDBAGIAN,
+                //        b.NMBAGIAN,
+                //        b.KDSUBBAGIAN,
+                //        b.NMSUBBAGIAN,
+                //        b.KDJABATAN,
+                //        b.NMJABATAN,
+
+                //        b.NMPERUSAHAAN,
+                //        b.JNSKONTRAK,
+                //        b.KATEGORIGAJI,
+                //        b.JNSGAJI,
+                //        b.NONPWP,
+                //        b.PPH21,
+                //        ISNULL(b.ISJAMINANBPJS,0) AS ISJAMINANBPJS,
+                //        b.NOBPJSTK,
+                //        b.NOBPJSKSH,
+                //        b.NOBPJSJHT,
+
+                //        null NOKONTRAK,
+                //        b.PAWAL,
+                //        b.PAKHIR
+
+                //    FROM HRDTAG.dbo.MST_KTP a
+                //    OUTER APPLY (
+                //        SELECT TOP 1 *
+                //        FROM TRX_KONTRAKKARYAWAN b
+                //        WHERE a.NOKTP COLLATE DATABASE_DEFAULT = b.NOKTP COLLATE DATABASE_DEFAULT
+                //        ORDER BY b.PAKHIR DESC
+                //    ) b
+                //    WHERE a.NOKTP = @noKtp
+                //    ";
+
                 var sql = @"
                     SELECT 
                         a.NOKTP,
-                        a.NAMALENGKAP NMKARYAWAN,
+                        a.NAMALENGKAP AS NMKARYAWAN,
                         a.TEMPATLAHIR,
                         a.TGLLAHIR,
                         a.ALAMAT,
@@ -252,48 +307,69 @@ namespace tagApi.Services.Hrd
                         a.AGAMA,
                         a.KDCABANG,
                         a.NMCABANG,
-                        b.NIKSISTAG,
+
+                        isnull(kontrak.NIKSISTAG,tetap.NIKSISTAG) NIKSISTAG,
+
                         a.IDFINGER,
+
                         ISNULL(a.NMBANK,'BCA') AS NMBANK,
+
                         a.NOREKENING,
-                        a.NOTELEPON NOHANDPHONE,
+                        a.NOTELEPON AS NOHANDPHONE,
                         a.TGLMASUK,
                         a.FOTO,
 
-                        b.KDDIVISI,
-                        b.NMDIVISI,
-                        b.KDBAGIAN,
-                        b.NMBAGIAN,
-                        b.KDSUBBAGIAN,
-                        b.NMSUBBAGIAN,
-                        b.KDJABATAN,
-                        b.NMJABATAN,
+                        kontrak.KDDIVISI,
+                        kontrak.NMDIVISI,
 
-                        b.NMPERUSAHAAN,
-                        b.JNSKONTRAK,
-                        b.KATEGORIGAJI,
-                        b.JNSGAJI,
-                        b.NONPWP,
-                        b.PPH21,
-                        ISNULL(b.ISJAMINANBPJS,0) AS ISJAMINANBPJS,
-                        b.NOBPJSTK,
-                        b.NOBPJSKSH,
-                        b.NOBPJSJHT,
+                        kontrak.KDBAGIAN,
+                        kontrak.NMBAGIAN,
 
-                        null NOKONTRAK,
-                        b.PAWAL,
-                        b.PAKHIR
+                        kontrak.KDSUBBAGIAN,
+                        kontrak.NMSUBBAGIAN,
+
+                        kontrak.KDJABATAN,
+                        kontrak.NMJABATAN,
+
+                        kontrak.NMPERUSAHAAN,
+                        kontrak.JNSKONTRAK,
+                        kontrak.KATEGORIGAJI,
+                        kontrak.JNSGAJI,
+                        kontrak.NONPWP,
+                        kontrak.PPH21,
+
+                        ISNULL(kontrak.ISJAMINANBPJS,0)
+                            AS ISJAMINANBPJS,
+
+                        kontrak.NOBPJSTK,
+                        kontrak.NOBPJSKSH,
+                        kontrak.NOBPJSJHT,
+
+                        NULL AS NOKONTRAK,
+
+                        kontrak.PAWAL,
+                        kontrak.PAKHIR
 
                     FROM HRDTAG.dbo.MST_KTP a
-                    OUTER APPLY (
+
+                    OUTER APPLY
+                    (
                         SELECT TOP 1 *
-                        FROM TRX_KONTRAKKARYAWAN b
-                        WHERE a.NOKTP COLLATE DATABASE_DEFAULT = b.NOKTP COLLATE DATABASE_DEFAULT
-                        ORDER BY b.PAKHIR DESC
-                    ) b
+                        FROM TRX_KONTRAKKARYAWAN kontrak
+                        WHERE a.NOKTP COLLATE DATABASE_DEFAULT =
+                              kontrak.NOKTP COLLATE DATABASE_DEFAULT
+                        ORDER BY kontrak.PAKHIR DESC
+                    ) kontrak
+
+                    OUTER APPLY
+                    (
+                        SELECT TOP 1 *
+                        FROM HRDTAG.dbo.MST_KARYAWANTETAP tetap
+                        WHERE a.NOKTP COLLATE DATABASE_DEFAULT =
+                              tetap.NOKTP COLLATE DATABASE_DEFAULT
+                    ) tetap
                     WHERE a.NOKTP = @noKtp
                     ";
-
                 var data = await connection.QueryFirstOrDefaultAsync<KontrakKaryawanDto>(
                     sql,
                     new { noKtp }
@@ -454,7 +530,7 @@ namespace tagApi.Services.Hrd
                 parameters.Add("@kdcabang", model.KDCABANG);
                 parameters.Add("@nmcabang", model.NMCABANG);
 
-                parameters.Add("@niksistag", model.NIKSISTAG);
+                parameters.Add("@niksistag", model.NIKSISTAG ?? "");
                 parameters.Add("@idfinger", model.IDFINGER);
                 parameters.Add("@nmbank", model.NMBANK);
                 parameters.Add("@norekening", model.NOREKENING);

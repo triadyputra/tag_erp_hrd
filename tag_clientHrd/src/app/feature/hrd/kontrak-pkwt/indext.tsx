@@ -751,7 +751,16 @@ const KontrakPkwtListComponent = () => {
               const res = await saveKontrakPkwt(data)
 
               console.log("SUCCESS:", res)
-              showSnackbar(res.Metadata?.Message || 'Gagal menghapus data', 'success');
+              showSnackbar(res.Metadata?.Message || 'Berhasil menyimpan data', 'success');
+
+              // 🔥 UPDATE SELECTED ROW DENGAN RESPON API
+              if (res?.Data?.NoKontrak) {
+                setSelectedRow((prev: any) => ({
+                  ...prev,
+                  NOKONTRAK: res.Data.NoKontrak,
+                  NIKSISTAG: res.Data.Niksistag ?? prev?.NIKSISTAG,
+                }))
+              }
 
               await mutate()
 
