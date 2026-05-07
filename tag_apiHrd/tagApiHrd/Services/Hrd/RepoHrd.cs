@@ -5,6 +5,7 @@ using tagApi.Data;
 using tagApiHrd.Model;
 using tagApiHrd.Model.Dto;
 using tagApiHrd.Model.Dto.cuti;
+using tagApiHrd.Model.Dto.legal;
 
 
 namespace tagApi.Services.Hrd
@@ -230,6 +231,34 @@ namespace tagApi.Services.Hrd
 
                 throw new Exception($"Gagal mengambil detail karyawan. {ex.Message}", ex);
             }
+        }
+
+        public async Task<List<ReportDataKontrakAktifDto>> GetReportDataKontrakAktifAll(
+            string? ckdcabang,
+            string? cnokontrak,
+            string? cnmkaryawan,
+            string? cjnskontrak,
+            string? sisaKontrakFilter
+        )
+        {
+            using var connection = _context.CreateConnection();
+
+            var parameters = new DynamicParameters();
+
+            parameters.Add("@ckdcabang", ckdcabang, DbType.String);
+            parameters.Add("@cnokontrak", cnokontrak, DbType.String);
+            parameters.Add("@cnmkaryawan", cnmkaryawan, DbType.String);
+            parameters.Add("@cjnskontrak", cjnskontrak, DbType.String);
+            parameters.Add("@SisaKontrakFilter", sisaKontrakFilter, DbType.String);
+
+            var result = await connection.QueryAsync<ReportDataKontrakAktifDto>(
+                "dbo.Web_Asp_ReportDataKontrakAktifAll",
+                parameters,
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 300
+            );
+
+            return result.ToList();
         }
 
         #region kontrak

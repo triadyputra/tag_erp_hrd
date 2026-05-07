@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Box, Button, Dialog, DialogContent, DialogTitle, TextField, Typography } from '@mui/material'
 import { login } from '@/services/auth.service'
 import { setAuthToken } from '@/helpers/token.helper'
@@ -13,7 +14,10 @@ const SESSION_LOCK_KEY = 'idle_locked_hrd'
 const SESSION_LOCKED_AT_KEY = 'idle_locked_hrd_at'
 
 export default function IdleLockProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const { showSnackbar } = useSnackbar()
+
+  const isAuthPage = pathname?.startsWith('/auth') ?? false
 
   const [locked, setLocked] = useState(false)
   const [password, setPassword] = useState('')
@@ -25,8 +29,10 @@ export default function IdleLockProvider({ children }: { children: React.ReactNo
   const lockedRef = useRef<boolean>(false)
 
   // Saat refresh (F5) atau tab direload, user tidak boleh "lepas lock" tanpa unlock.
-  // Maka, status lock disimpan di sessionStorage (per tab).
+  // Namun, jika user sedang di halaman auth, lock tidak diterapkan.
   useEffect(() => {
+    if (isAuthPage) return
+
     setMounted(true)
 
     // baca sessionStorage hanya setelah mount untuk menghindari mismatch SSR/CSR
@@ -47,7 +53,7 @@ export default function IdleLockProvider({ children }: { children: React.ReactNo
     } catch {
       // ignore (mis. browser privasi)
     }
-  }, [])
+  }, [isAuthPage])
 
   useEffect(() => {
     lockedRef.current = locked
@@ -74,7 +80,7 @@ export default function IdleLockProvider({ children }: { children: React.ReactNo
   }, [])
 
   useEffect(() => {
-    if (!mounted) return
+    if (!mounted || isAuthPage) return
 
     const t = window.setInterval(() => {
       if (lockedRef.current) return
@@ -91,7 +97,20 @@ export default function IdleLockProvider({ children }: { children: React.ReactNo
     }, 1000)
 
     return () => window.clearInterval(t)
-  }, [mounted, showSnackbar])
+  }, [mounted, isAuthPage, showSnackbar])
+
+  // Jika user pindah ke halaman auth, buka lock otomatis
+  useEffect(() => {
+    if (isAuthPage && locked) {
+      lockedRef.current = false
+      setLocked(false)
+      sessionStorage.removeItem(SESSION_LOCK_KEY)
+      sessionStorage.removeItem(SESSION_LOCKED_AT_KEY)
+      lastActivityAtRef.current = Date.now()
+      setPassword('')
+      setUnlockError('')
+    }
+  }, [isAuthPage, locked])
 
   const handleUnlock = async () => {
     const user = getAuthUser()

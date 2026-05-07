@@ -80,5 +80,8 @@ namespace tagApiHrd.Controllers.monitoring
                 return BadRequest(ApiResponse<object>.Error(ex.Message, "500"));
             }
         }
+    
+    
+    
     }
 }

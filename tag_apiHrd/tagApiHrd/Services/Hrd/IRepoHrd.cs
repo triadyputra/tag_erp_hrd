@@ -3,6 +3,7 @@
 using tagApiHrd.Model;
 using tagApiHrd.Model.Dto;
 using tagApiHrd.Model.Dto.cuti;
+using tagApiHrd.Model.Dto.legal;
 
 namespace tagApi.Services.Hrd
 {
@@ -46,7 +47,13 @@ namespace tagApi.Services.Hrd
 
         Task<int> UpdateStatusTtd(string noKontrak);
 
-
+        Task<List<ReportDataKontrakAktifDto>> GetReportDataKontrakAktifAll(
+        string? ckdcabang,
+        string? cnokontrak,
+        string? cnmkaryawan,
+        string? cjnskontrak,
+        string? sisaKontrakFilter
+    );
         #region cuti
         Task<PagedResult<ViewSaldoCutiKaryawan>> GetSaldoCutiKaryawan(
         int? tahun,
