@@ -11,7 +11,7 @@ import {
 import { IconChevronDown, IconPrinter } from '@tabler/icons-react';
 
 interface PrintDropdownProps {
-  onPrint: (format: 'pdf' | 'excel') => Promise<void>;
+  onPrint: (format: 'pdf' | 'xlsx') => Promise<void>;
   disabled?: boolean;
 }
 
@@ -24,7 +24,9 @@ const PrintDropdown: React.FC<PrintDropdownProps> = ({
 
   const open = Boolean(anchorEl);
 
-  const handleOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleOpen = (
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
     setAnchorEl(event.currentTarget);
   };
 
@@ -32,10 +34,13 @@ const PrintDropdown: React.FC<PrintDropdownProps> = ({
     if (!loading) setAnchorEl(null);
   };
 
-  const handleAction = async (format: 'pdf' | 'excel') => {
+  const handleAction = async (
+    format: 'pdf' | 'xlsx'
+  ) => {
     try {
       setLoading(true);
       setAnchorEl(null);
+
       await onPrint(format);
     } finally {
       setLoading(false);
@@ -52,7 +57,10 @@ const PrintDropdown: React.FC<PrintDropdownProps> = ({
         startIcon={!loading && <IconPrinter size={18} />}
         endIcon={
           loading ? (
-            <CircularProgress size={18} color="inherit" />
+            <CircularProgress
+              size={18}
+              color="inherit"
+            />
           ) : (
             <IconChevronDown size={18} />
           )
@@ -61,11 +69,16 @@ const PrintDropdown: React.FC<PrintDropdownProps> = ({
         {loading ? 'Processing...' : 'Print'}
       </Button>
 
-      <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+      >
         <MenuItem onClick={() => handleAction('pdf')}>
           Print PDF
         </MenuItem>
-        <MenuItem onClick={() => handleAction('excel')}>
+
+        <MenuItem onClick={() => handleAction('xlsx')}>
           Export Excel
         </MenuItem>
       </Menu>

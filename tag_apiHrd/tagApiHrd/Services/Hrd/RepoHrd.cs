@@ -261,6 +261,49 @@ namespace tagApi.Services.Hrd
             return result.ToList();
         }
 
+
+        public async Task<List<ReportDataKontrakAktifDto>> PrintDataKaryawan(
+        string? noKontrak,
+        string? namaKaryawan,
+        string? jenisKontrak,
+        string? cabang,
+        string? sisaKontrak)
+        {
+            try
+            {
+                const string procedureName = "Web_Asp_ReportDataKontrakAktifAll";
+
+                using var connection = _context.CreateConnection();
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@ckdcabang", string.IsNullOrWhiteSpace(cabang) ? null : cabang);
+                parameters.Add("@cnokontrak", string.IsNullOrWhiteSpace(noKontrak) ? null : noKontrak);
+                parameters.Add("@cnmkaryawan", string.IsNullOrWhiteSpace(namaKaryawan) ? null : namaKaryawan);
+                parameters.Add("@cjnskontrak", string.IsNullOrWhiteSpace(jenisKontrak) ? null : jenisKontrak);
+                parameters.Add("@SisaKontrakFilter", string.IsNullOrWhiteSpace(sisaKontrak) ? null : sisaKontrak);
+
+                var data = (await connection.QueryAsync<ReportDataKontrakAktifDto>(
+                    procedureName,
+                    parameters,
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 120
+                )).ToList();
+
+                return data;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("ERROR PrintDataKaryawan:");
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.InnerException?.Message);
+
+                throw new Exception(
+                    $"Gagal mengambil data report kontrak aktif. {ex.Message}",
+                    ex
+                );
+            }
+        }
+
         #region kontrak
         public async Task<KontrakKaryawanDto?> GetDetailKontrakByKtp(string noKtp)
         {

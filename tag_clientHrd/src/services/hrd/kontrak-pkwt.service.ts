@@ -146,12 +146,11 @@ export async function printKontrakPkwt(
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(noKontrak), // 🔥 sesuai backend kamu sekarang
+    body: JSON.stringify(noKontrak),
   });
 
   const json = await res.json();
 
-  // ❗ pakai metadata.code seperti RPL
   if (!res.ok || json?.metadata?.code !== '200') {
     throw new Error(
       json?.metadata?.message || 'Gagal mencetak kontrak'
@@ -159,7 +158,7 @@ export async function printKontrakPkwt(
   }
 
   return json as {
-    response: string; // base64 PDF
+    response: string;
     metadata: {
       message: string;
       code: string;

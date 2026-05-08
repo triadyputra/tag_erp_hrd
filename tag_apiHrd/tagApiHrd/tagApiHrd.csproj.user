@@ -17,6 +17,9 @@
     <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Update="Report\Hrd\RefDataKaryawan.cs">
+      <SubType>XtraReport</SubType>
+    </Compile>
     <Compile Update="Report\Hrd\RefKontrakPwkt.cs">
       <SubType>XtraReport</SubType>
     </Compile>

@@ -53,7 +53,15 @@ namespace tagApi.Services.Hrd
         string? cnmkaryawan,
         string? cjnskontrak,
         string? sisaKontrakFilter
-    );
+        );
+
+        Task<List<ReportDataKontrakAktifDto>> PrintDataKaryawan(
+        string? noKontrak,
+        string? namaKaryawan,
+        string? jenisKontrak,
+        string? cabang,
+        string? sisaKontrak);
+
         #region cuti
         Task<PagedResult<ViewSaldoCutiKaryawan>> GetSaldoCutiKaryawan(
         int? tahun,

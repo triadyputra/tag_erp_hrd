@@ -22,6 +22,10 @@
         public DateTime? TGLLAHIR { get; set; }
 
         public string? KDCABANG { get; set; }
+        public string? NMCABANG { get; set; }
+        public string? UMUR { get; set; }
+        public string? PENDIDIKAN { get; set; }
+        public string? SEX { get; set; }
 
         public int? SISA_KONTRAK { get; set; }
     }

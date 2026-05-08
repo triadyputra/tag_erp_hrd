@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using DevExpress.XtraPrinting.Native;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ using tagApi.Services.Combo;
 using tagApi.Services.Hrd;
 using tagApiHrd.Model;
 using tagApiHrd.Model.Dto;
+using tagApiHrd.Report.Hrd;
 
 namespace tagApiHrd.Controllers.monitoring
 {
@@ -80,8 +82,95 @@ namespace tagApiHrd.Controllers.monitoring
                 return BadRequest(ApiResponse<object>.Error(ex.Message, "500"));
             }
         }
-    
-    
-    
+
+        [HttpGet("PrintDataKaryawan")]
+        public async Task<IActionResult> PrintDataKaryawan(
+            [FromQuery] string? noKontrak,
+            [FromQuery] string? namaKaryawan,
+            [FromQuery] string? jenisKontrak,
+            [FromQuery] string? cabang,
+            [FromQuery] string? sisaKontrak,
+            [FromQuery] string? format = "pdf"
+        )
+        {
+            try
+            {
+                // ===============================
+                // AMBIL DATA
+                // ===============================
+                var data = await _repo.PrintDataKaryawan(
+                    noKontrak,
+                    namaKaryawan,
+                    jenisKontrak,
+                    cabang,
+                    sisaKontrak
+                );
+
+                if (data == null || !data.Any())
+                {
+                    return Ok(new
+                    {
+                        response = "",
+                        metadata = new
+                        {
+                            message = "Data tidak ditemukan",
+                            code = "201"
+                        }
+                    });
+                }
+
+                // ===============================
+                // SET REPORT
+                // ===============================
+                var report = new RefDataKaryawan();
+                report.DataSource = data;
+
+                using var ms = new MemoryStream();
+
+                // ===============================
+                // EXPORT FORMAT
+                // ===============================
+                format = format?.ToLower();
+
+                if (format == "excel" || format == "xlsx")
+                {
+                    report.ExportToXlsx(ms);
+                    format = "xlsx";
+                }
+                else
+                {
+                    report.ExportToPdf(ms);
+                    format = "pdf";
+                }
+
+                var base64 = Convert.ToBase64String(ms.ToArray());
+
+                return Ok(new
+                {
+                    response = base64,
+                    metadata = new
+                    {
+                        message = "Berhasil",
+                        code = "200",
+                        format = format.ToUpper()
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new
+                {
+                    response = "",
+                    metadata = new
+                    {
+                        message = ex.InnerException?.Message ?? ex.Message,
+                        code = "201"
+                    }
+                });
+            }
+        }
+
+
+
     }
 }

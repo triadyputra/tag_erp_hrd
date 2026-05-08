@@ -28,12 +28,16 @@ import {
 import { IconSearch } from '@tabler/icons-react'
 import useSWR from 'swr'
 import { useComboCabangWith } from '@/hooks/useComboGroup'
-import { fetchKontrakAktif } from '@/services/hrd/kontrak.service'
+import { fetchKontrakAktif, printDataKaryawan } from '@/services/hrd/kontrak.service'
 import { formatDate } from '@/utils/format'
 import dayjs from 'dayjs'
 import { getCabang } from '@/helpers/auth.helper'
+import PrintDropdown from '@/app/components/buttons/PrintDropdown'
+import { useSnackbar } from '@/app/context/SnackbarContext'
+import PdfPreviewDialog from '@/app/components/print-preview/PdfPreviewDialog'
 
 const KontrakKaryawanListComponent = () => {
+  const { showSnackbar } = useSnackbar()
   const { cabang: cabangOptions, loading : cabangLoading } = useComboCabangWith()
 	const [userCabang, setUserCabang] = useState<string | null>(null)
 	
@@ -53,6 +57,13 @@ const KontrakKaryawanListComponent = () => {
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+
+	/* =======================
+   * Print Preview
+   * ======================= */
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
 
   const { data, isLoading, mutate } = useSWR(
 		['kontrak', filterKontrak, filterNama, filterJenis, filterCabang, filterSisaKontrak, page, pageSize],
@@ -109,6 +120,75 @@ const KontrakKaryawanListComponent = () => {
 		setFilterCabang(inputCabang)
 		setPage(1)
 	}
+
+	// const handlePrint = async (format: 'pdf' | 'excel') => {
+	// 	try {
+	// 		const printUrl = await printDataKaryawan({
+	// 			noKontrak: filterKontrak,
+	// 			namaKaryawan: filterNama,
+	// 			jenisKontrak: filterJenis,
+	// 			cabang: filterCabang,
+	// 			sisaKontrak: filterSisaKontrak,
+	// 			format,
+	// 		})
+
+			
+	// 	} catch (err: any) {
+	// 		showSnackbar(err.message || 'Gagal mencetak data', 'error')
+	// 	}
+	// }
+	/* =======================
+   * Print
+   * ======================= */
+  const handlePrint = async (
+		format: 'pdf' | 'xlsx' = 'pdf'
+	) => {
+		try {
+			if (format === 'pdf') {
+				setPreviewLoading(true);
+
+				const res = await printDataKaryawan({
+					noKontrak: filterKontrak,
+					namaKaryawan: filterNama,
+					jenisKontrak: filterJenis,
+					cabang: filterCabang,
+					sisaKontrak: filterSisaKontrak,
+					format,
+				});
+
+				setPdfBase64(res.response);
+				setPreviewOpen(true);
+			} else {
+				// ===============================
+				// EXCEL DOWNLOAD
+				// ===============================
+				const res = await printDataKaryawan({
+					noKontrak: filterKontrak,
+					namaKaryawan: filterNama,
+					jenisKontrak: filterJenis,
+					cabang: filterCabang,
+					sisaKontrak: filterSisaKontrak,
+					format: 'xlsx',
+				});
+
+				const linkSource = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.response}`;
+
+				const downloadLink = document.createElement('a');
+
+				downloadLink.href = linkSource;
+				downloadLink.download = `DataKaryawan.xlsx`;
+
+				downloadLink.click();
+			}
+		} catch (err: any) {
+			showSnackbar(
+				err.message || 'Gagal generate file',
+				'error'
+			);
+		} finally {
+			setPreviewLoading(false);
+		}
+	};
 
 	const headerStyle = (theme: any) => ({
     backgroundColor:
@@ -291,6 +371,8 @@ const KontrakKaryawanListComponent = () => {
 						justifyContent: { xs: 'stretch', sm: 'flex-end' },
 					}}
 				>
+					<PrintDropdown onPrint={handlePrint} />
+
 					<Button
 						variant="outlined"
 						onClick={() => {
@@ -298,11 +380,13 @@ const KontrakKaryawanListComponent = () => {
 							setInputNama('')
 							setInputJenis('')
 							setInputCabang('')
+							setInputSisaKontrak('')
 
 							setFilterKontrak('')
 							setFilterNama('')
 							setFilterJenis('')
 							setFilterCabang('')
+							setFilterSisaKontrak('')
 
 							setPage(1)
 						}}
@@ -553,6 +637,18 @@ const KontrakKaryawanListComponent = () => {
           setPage(1)
         }}
       />
+
+			<PdfPreviewDialog
+        open={previewOpen}
+        loading={previewLoading}
+        base64Pdf={pdfBase64}
+        title="Preview Laporan CPC"
+        onClose={() => {
+          setPreviewOpen(false);
+          setPdfBase64(null);
+        }}
+      />
+			
     </Box>
   )
 }

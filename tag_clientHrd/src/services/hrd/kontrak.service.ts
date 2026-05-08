@@ -47,3 +47,48 @@ export async function fetchKontrakAktif(
 
   return json
 }
+
+// ===============================
+// PRINT DATA KARYAWAN (PDF / EXCEL)
+// ===============================
+export async function printDataKaryawan(params: {
+  noKontrak?: string
+  namaKaryawan?: string
+  jenisKontrak?: string
+  cabang?: string
+  sisaKontrak?: string
+  format?: 'pdf' | 'xlsx'
+}) {
+  const query = new URLSearchParams({
+    noKontrak: params.noKontrak ?? '',
+    namaKaryawan: params.namaKaryawan ?? '',
+    jenisKontrak: params.jenisKontrak ?? '',
+    cabang: params.cabang ?? '',
+    sisaKontrak: params.sisaKontrak ?? '',
+    format: params.format ?? 'pdf',
+  }).toString()
+
+  const res = await authFetch(
+    `${URL}/PrintDataKaryawan?${query}`,
+    {
+      method: 'GET',
+    }
+  )
+
+  const json = await res.json()
+
+  if (!res.ok || json?.metadata?.code !== '200') {
+    throw new Error(
+      json?.metadata?.message || 'Gagal mencetak data karyawan'
+    )
+  }
+
+  return json as {
+    response: string
+    metadata: {
+      message: string
+      code: string
+      format: string
+    }
+  }
+}
