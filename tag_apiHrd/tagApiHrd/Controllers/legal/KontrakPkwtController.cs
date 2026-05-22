@@ -10,6 +10,7 @@ using tagApi.Services.Hrd;
 using tagApiHrd.Model;
 using tagApiHrd.Model.Dto;
 using tagApiHrd.Model.Dto.report;
+using tagApiHrd.Services.master;
 
 namespace tagApi.Controllers.Hrd
 {
@@ -21,14 +22,20 @@ namespace tagApi.Controllers.Hrd
         private readonly IRepoHrd _repo;
         private readonly UserManager<ApplicationUser> userManager;
         private readonly IRepoCombo _comboRepository;
+        private readonly IFaktaIntegritasFileService _faktaIntegritasFiles;
         private readonly string _ttdPath;
 
-        public KontrakPkwtController(IRepoHrd repo, UserManager<ApplicationUser> userManager, IConfiguration configuration, IRepoCombo comboRepository)
+        public KontrakPkwtController(
+            IRepoHrd repo,
+            UserManager<ApplicationUser> userManager,
+            IConfiguration configuration,
+            IRepoCombo comboRepository,
+            IFaktaIntegritasFileService faktaIntegritasFiles)
         {
             _repo = repo;
             this.userManager = userManager;
             _comboRepository = comboRepository;
-            // 🔥 ambil dari appsettings
+            _faktaIntegritasFiles = faktaIntegritasFiles;
             _ttdPath = configuration["FileStorage:TtdPath"] ?? "D:/TAG/Storage/";
         }
 
@@ -197,6 +204,14 @@ namespace tagApi.Controllers.Hrd
                 if (model.PAWAL > model.PAKHIR)
                 {
                     return BadRequest(ApiResponse<object>.Error("Tanggal awal tidak boleh lebih besar dari tanggal akhir", "400"));
+                }
+
+                var isTambahKontrak = string.IsNullOrWhiteSpace(model.NOKONTRAK);
+                if (isTambahKontrak && !_faktaIntegritasFiles.Exists(model.NOKTP))
+                {
+                    return BadRequest(ApiResponse<object>.Error(
+                        "Dokumen fakta integritas belum diupload. Upload terlebih dahulu di Master KTP sebelum membuat kontrak.",
+                        "400"));
                 }
 
                 // =========================

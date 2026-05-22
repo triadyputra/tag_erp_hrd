@@ -22,11 +22,48 @@ namespace tagApiHrd.Controllers.absensi
         private readonly UserManager<ApplicationUser> userManager;
         private readonly IRepoCombo _comboRepository;
 
+        private const string MsgCutiSudahLewat =
+            "Tidak dapat dilakukan karena tanggal cuti yang diajukan sudah lewat.";
+
+        private const string MsgBackdateCuti =
+            "Tanggal cuti tidak boleh backdate (pilih hari ini atau tanggal mendatang).";
+
         public CutiKaryawanController(IRepoHrd repo, UserManager<ApplicationUser> userManager, IRepoCombo comboRepository)
         {
             _repo = repo;
             this.userManager = userManager;
             _comboRepository = comboRepository;
+        }
+
+        /// <summary>
+        /// Cuti dianggap sudah lewat jika seluruh tanggal cuti (hari terakhir) sebelum hari ini.
+        /// </summary>
+        private static bool IsTanggalCutiSudahLewat(IEnumerable<DateTime>? tanggalCuti)
+        {
+            if (tanggalCuti == null || !tanggalCuti.Any())
+                return false;
+
+            return tanggalCuti.Max(t => t.Date) < DateTime.Today;
+        }
+
+        private static bool HasBackdateTanggalCuti(IEnumerable<DateTime>? tanggalCuti)
+        {
+            if (tanggalCuti == null || !tanggalCuti.Any())
+                return false;
+
+            return tanggalCuti.Any(t => t.Date < DateTime.Today);
+        }
+
+        private static bool HasNewBackdateTanggalCuti(
+            IEnumerable<DateTime> submitted,
+            IEnumerable<DateTime>? existing)
+        {
+            var existingDates = existing?
+                .Select(d => d.Date)
+                .ToHashSet() ?? new HashSet<DateTime>();
+
+            return submitted.Any(d =>
+                d.Date < DateTime.Today && !existingDates.Contains(d.Date));
         }
 
         [ApiKeyAuthorize]
@@ -147,6 +184,34 @@ namespace tagApiHrd.Controllers.absensi
                     return BadRequest(ApiResponse<object>.Error("Tanggal pengajuan wajib diisi", "400"));
                 }
 
+                if (string.IsNullOrWhiteSpace(model.NoCuti))
+                {
+                    if (HasBackdateTanggalCuti(model.DetailTanggal))
+                    {
+                        return BadRequest(ApiResponse<object>.Error(MsgBackdateCuti, "400"));
+                    }
+                }
+                else
+                {
+                    var existing = await _repo.GetDetailCutiFormAsync(model.NoCuti);
+                    if (existing == null)
+                    {
+                        return NotFound(ApiResponse<object>.Error("Data cuti tidak ditemukan", "404"));
+                    }
+
+                    if (IsTanggalCutiSudahLewat(existing.DetailTanggal))
+                    {
+                        return BadRequest(ApiResponse<object>.Error(
+                            $"Tidak dapat mengubah data cuti. {MsgCutiSudahLewat}",
+                            "400"));
+                    }
+
+                    if (HasNewBackdateTanggalCuti(model.DetailTanggal, existing.DetailTanggal))
+                    {
+                        return BadRequest(ApiResponse<object>.Error(MsgBackdateCuti, "400"));
+                    }
+                }
+
                 // =========================
                 // USER LOGIN
                 // =========================
@@ -204,7 +269,19 @@ namespace tagApiHrd.Controllers.absensi
                     return BadRequest(ApiResponse<object>.Error("NoCuti wajib diisi", "400"));
                 }
 
-                // ambil user login
+                var existing = await _repo.GetDetailCutiFormAsync(noCuti);
+                if (existing == null)
+                {
+                    return NotFound(ApiResponse<object>.Error("Data cuti tidak ditemukan", "404"));
+                }
+
+                if (IsTanggalCutiSudahLewat(existing.DetailTanggal))
+                {
+                    return BadRequest(ApiResponse<object>.Error(
+                        $"Tidak dapat menghapus data cuti. {MsgCutiSudahLewat}",
+                        "400"));
+                }
+
                 var username = User.FindFirst(ClaimTypes.Name)?.Value ?? "SYSTEM";
 
                 var result = await _repo.DeleteCutiAsync(noCuti, username);

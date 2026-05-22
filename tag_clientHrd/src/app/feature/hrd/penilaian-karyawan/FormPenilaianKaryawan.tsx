@@ -108,10 +108,10 @@ function buildAspectBlocks(rows: AspekPenilaianRow[]): {
 }
 
 const REKOMENDASI_OPTIONS = [
-  { title: 'PPK', value: 'PPK' },
+  // { title: 'PPK', value: 'PPK' },
   { title: 'PKWT', value: 'PKWT' },
-  { title: 'ADDENDUM', value: 'ADDENDUM' },
-  { title: 'FREELANCE', value: 'FREELANCE' },
+  // { title: 'ADDENDUM', value: 'ADDENDUM' },
+  // { title: 'FREELANCE', value: 'FREELANCE' },
   { title: 'KONTRAK TIDAK DIPERPANJANG', value: 'KONTRAK TIDAK DIPERPANJANG' },
 ]
 
@@ -712,6 +712,7 @@ const FormPenilaianKaryawan: React.FC<Props> = ({ noTran, onClose, onSubmit }) =
         subtitle="Evaluasi kinerja karyawan kontrak"
         statusLabel={isEdit ? 'EDIT' : 'BARU'}
         statusColor={isEdit ? 'info' : 'warning'}
+        onClose={onClose}
       />
 
       <Divider />

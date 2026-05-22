@@ -26,6 +26,8 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\uploads\nakes\" />
+    <Folder Include="wwwroot\uploads\berita\" />
+    <Folder Include="wwwroot\apk\" />
   </ItemGroup>
 
 </Project>

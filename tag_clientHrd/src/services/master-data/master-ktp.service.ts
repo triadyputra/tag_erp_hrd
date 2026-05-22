@@ -78,6 +78,113 @@ export async function saveMasterKtp(payload: any) {
   return json?.data ?? json
 }
 
+export interface FaktaIntegritasResponse {
+  Exists: boolean
+  Base64?: string | null
+  FileName?: string
+}
+
+function parseApiData<T>(json: any): T {
+  return json?.data ?? json?.Data ?? json
+}
+
+export async function checkFaktaIntegritasExists(noktp: string): Promise<boolean> {
+  if (!noktp?.trim()) {
+    return false
+  }
+
+  const res = await authFetch(
+    `${BASE_URL}/${encodeURIComponent(noktp.trim())}/fakta-integritas/exists`
+  )
+  const json = await res.json()
+
+  if (!res.ok) {
+    throw new Error(
+      json?.Metadata?.Message ||
+        json?.message ||
+        'Gagal memeriksa dokumen fakta integritas'
+    )
+  }
+
+  const data = parseApiData<{ Exists?: boolean; exists?: boolean }>(json)
+  return !!(data?.Exists ?? data?.exists)
+}
+
+export async function fetchFaktaIntegritas(
+  noktp: string
+): Promise<FaktaIntegritasResponse> {
+  if (!noktp?.trim()) {
+    throw new Error('No KTP wajib diisi')
+  }
+
+  const res = await authFetch(
+    `${BASE_URL}/${encodeURIComponent(noktp.trim())}/fakta-integritas`
+  )
+  const json = await res.json()
+
+  if (!res.ok) {
+    throw new Error(
+      json?.Metadata?.Message ||
+        json?.message ||
+        'Gagal mengambil dokumen fakta integritas'
+    )
+  }
+
+  return parseApiData<FaktaIntegritasResponse>(json)
+}
+
+export async function uploadFaktaIntegritas(noktp: string, file: File) {
+  if (!noktp?.trim()) {
+    throw new Error('No KTP wajib diisi')
+  }
+
+  const form = new FormData()
+  form.append('file', file)
+
+  const res = await authFetch(
+    `${BASE_URL}/${encodeURIComponent(noktp.trim())}/fakta-integritas`,
+    {
+      method: 'POST',
+      body: form,
+    }
+  )
+
+  const json = await res.json()
+
+  if (!res.ok) {
+    throw new Error(
+      json?.Metadata?.Message ||
+        json?.message ||
+        'Gagal mengupload dokumen fakta integritas'
+    )
+  }
+
+  return json
+}
+
+export async function deleteFaktaIntegritas(noktp: string) {
+  if (!noktp?.trim()) {
+    throw new Error('No KTP wajib diisi')
+  }
+
+  const res = await authFetch(
+    `${BASE_URL}/${encodeURIComponent(noktp.trim())}/fakta-integritas`,
+    { method: 'DELETE' }
+  )
+
+  const json = await res.json()
+
+  if (!res.ok) {
+    throw new Error(
+      json?.Metadata?.Message ||
+        json?.message ||
+        'Gagal menghapus dokumen fakta integritas'
+    )
+  }
+
+  return json
+}
+
 export async function deleteMasterKtp(noktp: string, kdcabang: string) {
   if (!noktp) {
     throw new Error('No KTP wajib diisi')

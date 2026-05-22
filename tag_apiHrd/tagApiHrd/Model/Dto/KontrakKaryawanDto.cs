@@ -52,5 +52,11 @@
         // 🔥 hasil base64
         public int Status { get; set; }
         public string? SIGNATURE_BASE64 { get; set; }
+     
+        
+        public string? NOEVALUASI { get; set; }
+        public string? HASIL { get; set; }
+        public string? KEPUTUSAN { get; set; }
+        public int? STATUSKONTRAK { get; set; }
     }
 }

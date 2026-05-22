@@ -369,58 +369,68 @@ namespace tagApi.Services.Hrd
                 var sql = @"
                     SELECT 
                         a.NOKTP,
-                        a.NAMALENGKAP AS NMKARYAWAN,
-                        a.TEMPATLAHIR,
-                        a.TGLLAHIR,
-                        a.ALAMAT,
-                        a.KELAMIN,
-                        a.PERKAWINAN,
-                        a.PENDIDIKAN,
-                        a.AGAMA,
-                        a.KDCABANG,
-                        a.NMCABANG,
+	                    a.NAMALENGKAP AS NMKARYAWAN,
+	                    a.TEMPATLAHIR,
+	                    a.TGLLAHIR,
+	                    a.ALAMAT,
+	                    a.KELAMIN,
+	                    a.PERKAWINAN,
+	                    a.PENDIDIKAN,
+	                    a.AGAMA,
+	                    a.KDCABANG,
+	                    a.NMCABANG,
+	
+	                    isnull(kontrak.NIKSISTAG,tetap.NIKSISTAG) NIKSISTAG,
+	
+	                    a.IDFINGER,
+	
+	                    ISNULL(a.NMBANK,'BCA') AS NMBANK,
+	
+	                    a.NOREKENING,
+	                    a.NOTELEPON AS NOHANDPHONE,
+	                    a.TGLMASUK,
+	                    a.FOTO,
+	
+	                    kontrak.KDDIVISI,
+	                    kontrak.NMDIVISI,
+	
+	                    kontrak.KDBAGIAN,
+	                    kontrak.NMBAGIAN,
+	
+	                    kontrak.KDSUBBAGIAN,
+	                    kontrak.NMSUBBAGIAN,
+	
+	                    kontrak.KDJABATAN,
+	                    kontrak.NMJABATAN,
+	
+	                    kontrak.NMPERUSAHAAN,
+	                    kontrak.JNSKONTRAK,
+	                    kontrak.KATEGORIGAJI,
+	                    kontrak.JNSGAJI,
+	                    kontrak.NONPWP,
+	                    kontrak.PPH21,
+	
+	                    ISNULL(kontrak.ISJAMINANBPJS,0)
+	                        AS ISJAMINANBPJS,
+	
+	                    kontrak.NOBPJSTK,
+	                    kontrak.NOBPJSKSH,
+	                    kontrak.NOBPJSJHT,
+	
+	                    NULL AS NOKONTRAK,
+	
+	                    kontrak.PAWAL,
+	                    kontrak.PAKHIR,
+                        
+                        CASE 
+	                        WHEN kontrak.NOKONTRAK IS NULL 
+	                            THEN 0
+	                        ELSE 1
+	                    END AS STATUSKONTRAK,
+                        evaluasi.NOTRAN AS NOEVALUASI,
+                        evaluasi.NILAI AS HASIL,
+                        evaluasi.KEPUTUSAN 
 
-                        isnull(kontrak.NIKSISTAG,tetap.NIKSISTAG) NIKSISTAG,
-
-                        a.IDFINGER,
-
-                        ISNULL(a.NMBANK,'BCA') AS NMBANK,
-
-                        a.NOREKENING,
-                        a.NOTELEPON AS NOHANDPHONE,
-                        a.TGLMASUK,
-                        a.FOTO,
-
-                        kontrak.KDDIVISI,
-                        kontrak.NMDIVISI,
-
-                        kontrak.KDBAGIAN,
-                        kontrak.NMBAGIAN,
-
-                        kontrak.KDSUBBAGIAN,
-                        kontrak.NMSUBBAGIAN,
-
-                        kontrak.KDJABATAN,
-                        kontrak.NMJABATAN,
-
-                        kontrak.NMPERUSAHAAN,
-                        kontrak.JNSKONTRAK,
-                        kontrak.KATEGORIGAJI,
-                        kontrak.JNSGAJI,
-                        kontrak.NONPWP,
-                        kontrak.PPH21,
-
-                        ISNULL(kontrak.ISJAMINANBPJS,0)
-                            AS ISJAMINANBPJS,
-
-                        kontrak.NOBPJSTK,
-                        kontrak.NOBPJSKSH,
-                        kontrak.NOBPJSJHT,
-
-                        NULL AS NOKONTRAK,
-
-                        kontrak.PAWAL,
-                        kontrak.PAKHIR
 
                     FROM HRDTAG.dbo.MST_KTP a
 
@@ -436,10 +446,19 @@ namespace tagApi.Services.Hrd
                     OUTER APPLY
                     (
                         SELECT TOP 1 *
+                        FROM HDR_EVALUASIKONTRAK evaluasi
+                        WHERE kontrak.NOKONTRAK = evaluasi.NOKONTRAK
+                        ORDER BY evaluasi.TGLNILAI DESC
+                    ) evaluasi
+
+                    OUTER APPLY
+                    (
+                        SELECT TOP 1 *
                         FROM HRDTAG.dbo.MST_KARYAWANTETAP tetap
                         WHERE a.NOKTP COLLATE DATABASE_DEFAULT =
                               tetap.NOKTP COLLATE DATABASE_DEFAULT
                     ) tetap
+
                     WHERE a.NOKTP = @noKtp
                     ";
                 var data = await connection.QueryFirstOrDefaultAsync<KontrakKaryawanDto>(

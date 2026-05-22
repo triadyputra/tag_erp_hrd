@@ -29,6 +29,7 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs'
 import { fetchDetailKontrakPkwt, printKontrakPkwt } from '@/services/hrd/kontrak-pkwt.service'
+import { checkFaktaIntegritasExists } from '@/services/master-data/master-ktp.service'
 import AccessButton from '@/app/components/buttons/AccessButton'
 import { useSnackbar } from '@/app/context/SnackbarContext'
 import PdfPreviewDialog from '@/app/components/print-preview/PdfPreviewDialog'
@@ -79,6 +80,10 @@ interface KontrakKaryawanDto {
   KETERANGAN?: string
   FOTO_BASE64?: string
   SIGNATURE_BASE64?: string
+  STATUSKONTRAK?: number
+  NOEVALUASI?: string
+  HASIL?: string
+  KEPUTUSAN?: string
 }
 
 interface Props {
@@ -163,6 +168,10 @@ const FormKontrakKaryawan: React.FC<Props> = ({
           NOHANDPHONE: res.NOHANDPHONE ?? "",
           NOSURATTUGAS: res.NOSURATTUGAS ?? "",
           KETERANGAN: res.KETERANGAN ?? "",
+          STATUSKONTRAK: res.STATUSKONTRAK ?? 0,
+          NOEVALUASI: res.NOEVALUASI ?? "",
+          HASIL: res.HASIL ?? "",
+          KEPUTUSAN: res.KEPUTUSAN ?? "",
         }
 
         setValues({ ...data }) // 🔥 force render
@@ -265,7 +274,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
         // format date
         TGLLAHIR: res.TGLLAHIR?.substring(0, 10) || "",
         TGLMASUK: res.TGLMASUK?.substring(0, 10) || "",
-        TGLINPUT: res.TGLINPUT?.substring(0, 10) || "",
+        TGLINPUT: res.TGLINPUT?.substring(0, 10) || dayjs().format("YYYY-MM-DD"),
         PAWAL: res.PAWAL?.substring(0, 10) || "",
         PAKHIR: res.PAKHIR?.substring(0, 10) || "",
 
@@ -273,6 +282,11 @@ const FormKontrakKaryawan: React.FC<Props> = ({
         NOHANDPHONE: res.NOHANDPHONE ?? "",
         NOSURATTUGAS: res.NOSURATTUGAS ?? "",
         KETERANGAN: res.KETERANGAN ?? "",
+        STATUSKONTRAK: res.STATUSKONTRAK ?? 0,
+        NOEVALUASI: res.NOEVALUASI ?? "",
+        HASIL: res.HASIL ?? "",
+        KEPUTUSAN: res.KEPUTUSAN ?? "",
+
       });
 
       setDetail(res);
@@ -329,6 +343,34 @@ const FormKontrakKaryawan: React.FC<Props> = ({
     setErrors(err);
 
     if (Object.keys(err).length > 0) return;
+
+    if (!isEdit) {
+      const noKtp = values.NOKTP?.trim()
+      if (!noKtp) {
+        showSnackbar('No KTP wajib diisi', 'warning')
+        return
+      }
+
+      setLoading(true)
+      try {
+        const faktaAda = await checkFaktaIntegritasExists(noKtp)
+        if (!faktaAda) {
+          showSnackbar(
+            'Dokumen fakta integritas belum diupload. Upload terlebih dahulu di Master KTP sebelum membuat kontrak.',
+            'error'
+          )
+          return
+        }
+      } catch (err: any) {
+        showSnackbar(
+          err?.message || 'Gagal memeriksa dokumen fakta integritas',
+          'error'
+        )
+        return
+      } finally {
+        setLoading(false)
+      }
+    }
 
     setLoading(true);
     try {
@@ -397,6 +439,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
         subtitle="Pengisian dan pengelolaan informasi kontrak karyawan"
         statusLabel={isEdit ? 'EDIT' : 'CREATE'}
         statusColor={isEdit ? 'info' : 'warning'}
+        onClose={onClose}
       />
 
       <Divider />
@@ -1045,6 +1088,82 @@ const FormKontrakKaryawan: React.FC<Props> = ({
                 title="Data Kontrak"
                 subtitle="Detail kontrak kerja dan periode berlaku"
               />
+
+              {/* ================= INFORMASI EVALUASI ================= */}
+              {values.STATUSKONTRAK === 1 && (
+                <Box
+                  sx={(theme) => {
+                    const isPerpanjang = values.KEPUTUSAN === "DIPERPANJANG"
+                    return {
+                      mb: 2,
+                      p: 2,
+                      borderRadius: 2,
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? isPerpanjang
+                            ? "rgba(34,197,94,0.08)"
+                            : "rgba(239,68,68,0.08)"
+                          : isPerpanjang
+                            ? "#f0fdf4"
+                            : "#fef2f2",
+                      border:
+                        theme.palette.mode === "dark"
+                          ? isPerpanjang
+                            ? "1px solid rgba(34,197,94,0.2)"
+                            : "1px solid rgba(239,68,68,0.2)"
+                          : isPerpanjang
+                            ? "1px solid #bbf7d0"
+                            : "1px solid #fecaca",
+                    }
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={700}
+                    sx={{ mb: 1.5 }}
+                  >
+                    Informasi Evaluasi
+                  </Typography>
+
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="No Evaluasi"
+                        value={values.NOEVALUASI ?? ""}
+                        onChange={handleChange("NOEVALUASI")}
+                        sx={inputCompactStyle}
+                        InputProps={{ readOnly: true }}
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Hasil Evaluasi"
+                        value={values.HASIL ?? ""}
+                        onChange={handleChange("HASIL")}
+                        sx={inputCompactStyle}
+                        InputProps={{ readOnly: true }}
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Keputusan"
+                        value={values.KEPUTUSAN ?? ""}
+                        onChange={handleChange("KEPUTUSAN")}
+                        sx={inputCompactStyle}
+                        InputProps={{ readOnly: true }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
 
               <Stack spacing={1.5}>
 

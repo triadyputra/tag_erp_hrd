@@ -1,9 +1,4 @@
-﻿using tagApi.Data;
-using tagApi.Filter;
-using tagApi.Model;
-using tagApi.Services;
-using tagApi.Services.Combo;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -11,7 +6,14 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Text.Json.Serialization;
+using tagApi.Data;
+using tagApi.Filter;
+using tagApi.Model;
+using tagApi.Services;
+using tagApi.Services.Combo;
 using tagApi.Services.Hrd;
+using tagApiHrd.Model.Options;
+using tagApiHrd.Services.Berita;
 using tagApiHrd.Services.Legal;
 using tagApiHrd.Services.master;
 
@@ -147,6 +149,12 @@ builder.Services.AddScoped<IRepoPacklaring, RepoPacklaring>();
 builder.Services.AddScoped<IRepoPenilaian, RepoPenilaian>();
 
 builder.Services.AddScoped<IRepoMasterKtp, RepoMasterKtp>();
+
+builder.Services.AddScoped<IFaktaIntegritasFileService, FaktaIntegritasFileService>();
+
+builder.Services.AddScoped<IBeritaService, BeritaService>();
+
+builder.Services.Configure<MobileAppUpdateOptions>(builder.Configuration.GetSection("MobileApp"));
 
 builder.Services.AddHttpContextAccessor();
 

@@ -203,6 +203,7 @@ export default function FormAprovalEvaluasi({ open, row, onClose, onSubmit }: Pr
         subtitle="Catatan HRD & keputusan kontrak"
         statusLabel="APPROVAL"
         statusColor="info"
+        onClose={onClose}
       />
 
       <Divider />

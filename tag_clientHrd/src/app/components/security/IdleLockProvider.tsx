@@ -8,7 +8,7 @@ import { setAuthToken } from '@/helpers/token.helper'
 import { getAuthUser } from '@/helpers/auth.helper'
 import { useSnackbar } from '@/app/context/SnackbarContext'
 
-const IDLE_LOCK_MS = 10 * 60 * 1000 // 10 menit
+const IDLE_LOCK_MS = 30 * 60 * 1000 // 10 menit
 
 const SESSION_LOCK_KEY = 'idle_locked_hrd'
 const SESSION_LOCKED_AT_KEY = 'idle_locked_hrd_at'
@@ -29,30 +29,29 @@ export default function IdleLockProvider({ children }: { children: React.ReactNo
   const lockedRef = useRef<boolean>(false)
 
   // Saat refresh (F5) atau tab direload, user tidak boleh "lepas lock" tanpa unlock.
-  // Namun, jika user sedang di halaman auth, lock tidak diterapkan.
+  // Di halaman auth tidak memuat state lock dari sessionStorage (login harus selalu tampil).
+  // mounted harus true di auth juga — jika tidak, `return null` di bawah membuat halaman login kosong.
   useEffect(() => {
-    if (isAuthPage) return
+    if (!isAuthPage) {
+      try {
+        const isLocked = sessionStorage.getItem(SESSION_LOCK_KEY) === '1'
+        const lockedAtRaw = sessionStorage.getItem(SESSION_LOCKED_AT_KEY)
+
+        if (isLocked) {
+          lockedRef.current = true
+          setLocked(true)
+          setPassword('')
+          setUnlockError('')
+
+          const lockedAt = lockedAtRaw ? Number(lockedAtRaw) : Date.now()
+          lastActivityAtRef.current = Math.max(0, lockedAt)
+        }
+      } catch {
+        // ignore (mis. browser privasi)
+      }
+    }
 
     setMounted(true)
-
-    // baca sessionStorage hanya setelah mount untuk menghindari mismatch SSR/CSR
-    try {
-      const isLocked = sessionStorage.getItem(SESSION_LOCK_KEY) === '1'
-      const lockedAtRaw = sessionStorage.getItem(SESSION_LOCKED_AT_KEY)
-
-      if (isLocked) {
-        lockedRef.current = true
-        setLocked(true)
-        setPassword('')
-        setUnlockError('')
-
-        // Agar interval tidak "mencoba mengunci ulang" berulang-ulang.
-        const lockedAt = lockedAtRaw ? Number(lockedAtRaw) : Date.now()
-        lastActivityAtRef.current = Math.max(0, lockedAt)
-      }
-    } catch {
-      // ignore (mis. browser privasi)
-    }
   }, [isAuthPage])
 
   useEffect(() => {

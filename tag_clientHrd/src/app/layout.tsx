@@ -2,6 +2,7 @@ import React from "react";
 import MyApp from "./app";
 import NextTopLoader from 'nextjs-toploader';
 import "./global.css";
+import "quill/dist/quill.snow.css";
 import { CustomizerContextProvider } from "./context/customizerContext";
 import AuthGuard from "./components/auth/AuthGuard";
 import { SnackbarProvider } from "./context/SnackbarContext";

@@ -1,6 +1,14 @@
 'use client'
 
-import { Box, Chip, DialogTitle, Divider, Typography } from '@mui/material'
+import {
+  Box,
+  Chip,
+  DialogTitle,
+  Divider,
+  IconButton,
+  Typography,
+} from '@mui/material'
+import { IconX } from '@tabler/icons-react'
 import React from 'react'
 
 type Props = {
@@ -8,6 +16,8 @@ type Props = {
   subtitle?: string
   statusLabel?: string
   statusColor?: 'success' | 'warning' | 'info' | 'error' | 'default'
+  /** Tombol silang di kanan header; memanggil handler yang sama dengan menutup dialog. */
+  onClose?: () => void
 }
 
 export default function DialogHeader({
@@ -15,6 +25,7 @@ export default function DialogHeader({
   subtitle,
   statusLabel,
   statusColor = 'default',
+  onClose,
 }: Props) {
   return (
     <>
@@ -76,19 +87,47 @@ export default function DialogHeader({
         </Box>
 
         {/* RIGHT */}
-        {statusLabel && (
-          <Chip
-            size="small"
-            label={statusLabel}
-            color={statusColor}
-            variant="filled" // 🔥 ubah dari outlined → lebih premium
-            sx={{
-              fontWeight: 600,
-              height: 24,
-              borderRadius: 1.5,
-            }}
-          />
-        )}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            flexShrink: 0,
+          }}
+        >
+          {statusLabel && (
+            <Chip
+              size="small"
+              label={statusLabel}
+              color={statusColor}
+              variant="filled" // 🔥 ubah dari outlined → lebih premium
+              sx={{
+                fontWeight: 600,
+                height: 24,
+                borderRadius: 1.5,
+              }}
+            />
+          )}
+          {onClose && (
+            <IconButton
+              type="button"
+              size="small"
+              onClick={onClose}
+              aria-label="Tutup dialog"
+              sx={(theme) => ({
+                color: 'inherit',
+                '&:hover': {
+                  backgroundColor:
+                    theme.palette.mode === 'dark'
+                      ? theme.palette.action.hover
+                      : 'rgba(255,255,255,0.18)',
+                },
+              })}
+            >
+              <IconX size={20} stroke={2} />
+            </IconButton>
+          )}
+        </Box>
       </DialogTitle>
 
       <Divider />

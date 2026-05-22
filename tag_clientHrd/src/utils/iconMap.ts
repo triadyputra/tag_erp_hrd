@@ -29,7 +29,8 @@ import {
   IconClipboardText,
   IconReportAnalytics,
   IconChecklist,
-  IconCreditCard
+  IconCreditCard,
+  IconNews
 } from "@tabler/icons-react";
 
 export const iconMap: Record<string, React.ElementType> = {
@@ -62,5 +63,6 @@ export const iconMap: Record<string, React.ElementType> = {
   IconClipboardText,
   IconReportAnalytics,
   IconChecklist,
-  IconCreditCard
+  IconCreditCard,
+  IconNews
 };

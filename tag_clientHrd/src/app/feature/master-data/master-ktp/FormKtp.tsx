@@ -17,16 +17,32 @@ import {
   Avatar,
   IconButton,
   Badge,
+  Paper,
+  Chip,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import DialogHeader from '@/app/components/DialogHeader/DialogHeader'
 import SectionTitle from '@/app/components/SectionTitle/SectionTitle'
-import { IconDeviceFloppy, IconCamera, IconX } from '@tabler/icons-react'
+import {
+  IconDeviceFloppy,
+  IconCamera,
+  IconX,
+  IconFileTypePdf,
+  IconUpload,
+  IconEye,
+} from '@tabler/icons-react'
+import PdfPreviewDialog from '@/app/components/print-preview/PdfPreviewDialog'
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 import { useComboCabangWith, useComboVendorByKode } from '@/hooks/useComboGroup'
 import { useSnackbar } from '@/app/context/SnackbarContext'
-import { fetchDetailMasterKtp } from '@/services/master-data/master-ktp.service'
+import {
+  deleteFaktaIntegritas,
+  fetchDetailMasterKtp,
+  fetchFaktaIntegritas,
+  uploadFaktaIntegritas,
+} from '@/services/master-data/master-ktp.service'
 import { inputCompactStyle } from '@/app/feature/hrd/shared/inputCompactStyle'
 
 interface FormMasterKtpDto {
@@ -94,7 +110,52 @@ const FormMasterKtp: React.FC<Props> = ({
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [errors, setErrors] = useState<any>({})
   const [photoPreview, setPhotoPreview] = useState<string>('')
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
+  const [pdfPreviewBase64, setPdfPreviewBase64] = useState<string | null>(null)
+  const [faktaBase64, setFaktaBase64] = useState<string | null>(null)
+  const [hasFakta, setHasFakta] = useState(false)
+  const [faktaUploading, setFaktaUploading] = useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const docInputRef = React.useRef<HTMLInputElement>(null)
+
+  const MAX_PDF_SIZE = 2 * 1024 * 1024
+
+  const faktaThumbnailUrl = React.useMemo(() => {
+    if (!faktaBase64) return null
+    try {
+      const byteCharacters = atob(faktaBase64)
+      const byteNumbers = new Uint8Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      const blob = new Blob([byteNumbers], { type: 'application/pdf' })
+      return URL.createObjectURL(blob)
+    } catch {
+      return null
+    }
+  }, [faktaBase64])
+
+  React.useEffect(() => {
+    return () => {
+      if (faktaThumbnailUrl) URL.revokeObjectURL(faktaThumbnailUrl)
+    }
+  }, [faktaThumbnailUrl])
+
+  const loadFaktaIntegritas = async (noKtp: string) => {
+    try {
+      const res = await fetchFaktaIntegritas(noKtp)
+      if (res.Exists && res.Base64) {
+        setFaktaBase64(res.Base64)
+        setHasFakta(true)
+      } else {
+        setFaktaBase64(null)
+        setHasFakta(false)
+      }
+    } catch {
+      setFaktaBase64(null)
+      setHasFakta(false)
+    }
+  }
 
   const { cabang: cabangOptions, loading: cabangLoading } = useComboCabangWith()
   const { vendor: vendorOptions, loading: vendorLoading } = useComboVendorByKode()
@@ -177,6 +238,10 @@ const FormMasterKtp: React.FC<Props> = ({
 
         setValues(data)
         setPhotoPreview(data.Foto)
+
+        if (data.Noktp) {
+          await loadFaktaIntegritas(data.Noktp)
+        }
       } catch (err: any) {
         console.error(err)
         showSnackbar(err?.message || 'Gagal mengambil detail KTP', 'error')
@@ -238,6 +303,70 @@ const FormMasterKtp: React.FC<Props> = ({
     }
   }
 
+  const handleFaktaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const isPdf =
+      file.type === 'application/pdf' ||
+      file.name.toLowerCase().endsWith('.pdf')
+
+    if (!isPdf) {
+      showSnackbar('File harus berformat PDF', 'error')
+      if (docInputRef.current) docInputRef.current.value = ''
+      return
+    }
+
+    if (file.size > MAX_PDF_SIZE) {
+      showSnackbar('Ukuran dokumen maksimal 2MB', 'error')
+      if (docInputRef.current) docInputRef.current.value = ''
+      return
+    }
+
+    const noKtp = values.Noktp?.trim()
+    if (!noKtp) {
+      showSnackbar('Isi No KTP terlebih dahulu sebelum upload', 'warning')
+      if (docInputRef.current) docInputRef.current.value = ''
+      return
+    }
+
+    setFaktaUploading(true)
+    try {
+      await uploadFaktaIntegritas(noKtp, file)
+      await loadFaktaIntegritas(noKtp)
+      showSnackbar('Dokumen fakta integritas berhasil diupload', 'success')
+    } catch (err: any) {
+      showSnackbar(err?.message || 'Gagal upload dokumen', 'error')
+    } finally {
+      setFaktaUploading(false)
+      if (docInputRef.current) docInputRef.current.value = ''
+    }
+  }
+
+  const handleRemoveFakta = async () => {
+    const noKtp = values.Noktp?.trim()
+    if (!noKtp) return
+
+    setFaktaUploading(true)
+    try {
+      await deleteFaktaIntegritas(noKtp)
+      setFaktaBase64(null)
+      setHasFakta(false)
+      if (docInputRef.current) docInputRef.current.value = ''
+      showSnackbar('Dokumen fakta integritas berhasil dihapus', 'success')
+    } catch (err: any) {
+      showSnackbar(err?.message || 'Gagal menghapus dokumen', 'error')
+    } finally {
+      setFaktaUploading(false)
+    }
+  }
+
+  const handleOpenFaktaPreview = () => {
+    if (!faktaBase64) return
+    setPdfPreviewBase64(faktaBase64)
+    setPdfPreviewOpen(true)
+  }
+
   const handleSubmit = async (e?: any, closeAfterSave = false) => {
     e?.preventDefault?.()
 
@@ -287,6 +416,7 @@ const FormMasterKtp: React.FC<Props> = ({
         subtitle="Pengisian dan pengelolaan informasi data KTP"
         statusLabel={isEdit ? 'EDIT' : 'CREATE'}
         statusColor={isEdit ? 'info' : 'warning'}
+        onClose={onClose}
       />
 
       <Divider />
@@ -315,92 +445,335 @@ const FormMasterKtp: React.FC<Props> = ({
       <form onSubmit={handleSubmit}>
         <DialogContent sx={{ position: 'relative', pt: 3 }}>
           
-          {/* ================= PHOTO SECTION ================= */}
+          {/* ================= FOTO & FAKTA INTEGRITAS ================= */}
           <Box
             sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
               mb: 3,
               pb: 3,
               borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
             }}
           >
-            <Badge
-              overlap="circular"
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              badgeContent={
-                <IconButton
-                  size="small"
-                  color="primary"
-                  onClick={() => fileInputRef.current?.click()}
-                  sx={{
-                    backgroundColor: 'background.paper',
-                    border: '2px solid',
-                    borderColor: 'primary.main',
-                    '&:hover': { backgroundColor: 'primary.light' },
-                    boxShadow: 2,
-                  }}
-                >
-                  <IconCamera size={18} />
-                </IconButton>
-              }
-            >
-              <Avatar
-                src={photoPreview || undefined}
-                alt={values.NamaLengkap || 'Foto'}
-                sx={{
-                  width: 140,
-                  height: 140,
-                  border: '4px solid',
-                  borderColor: photoPreview ? 'primary.main' : 'divider',
-                  bgcolor: photoPreview ? 'transparent' : 'action.selected',
-                  fontSize: 48,
-                  boxShadow: photoPreview ? 4 : 1,
-                }}
-              >
-                {!photoPreview && (values.NamaLengkap?.charAt(0) || '?')}
-              </Avatar>
-            </Badge>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              style={{ display: 'none' }}
-            />
-            <Typography variant="subtitle1" fontWeight={600} mt={1.5}>
-              {values.NamaLengkap || 'Data Karyawan'}
-            </Typography>
-            {values.Noktp && (
-              <Typography variant="caption" color="text.secondary">
-                NOKTP: {values.Noktp}
+            <Stack alignItems="center" textAlign="center" spacing={0.5} mb={2.5}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                {values.NamaLengkap || 'Data Karyawan'}
               </Typography>
-            )}
-            <Stack direction="row" spacing={1} mt={1.5}>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => fileInputRef.current?.click()}
-                startIcon={<IconCamera size={16} />}
-              >
-                Upload Foto
-              </Button>
-              {photoPreview && (
-                <Button
+              {values.Noktp ? (
+                <Chip
                   size="small"
-                  variant="outlined"
-                  color="error"
-                  onClick={handleRemovePhoto}
-                  startIcon={<IconX size={16} />}
-                >
-                  Hapus
-                </Button>
+                  label={`No KTP: ${values.Noktp}`}
+                  sx={{ fontWeight: 500, fontSize: 11 }}
+                />
+              ) : (
+                <Typography variant="caption" color="text.secondary">
+                  Lengkapi No KTP untuk nama file dokumen PDF
+                </Typography>
               )}
             </Stack>
-            <Typography fontSize={11} color="text.secondary" mt={0.5}>
-              Max 2MB (JPG, PNG)
-            </Typography>
+
+            <Grid container spacing={2.5}>
+              {/* —— Foto —— */}
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Paper
+                  elevation={0}
+                  sx={(theme) => ({
+                    p: 2.5,
+                    height: '100%',
+                    minHeight: 300,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: photoPreview
+                      ? alpha(theme.palette.primary.main, 0.4)
+                      : theme.palette.divider,
+                    background: `linear-gradient(160deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${theme.palette.background.paper} 55%)`,
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      boxShadow: theme.shadows[4],
+                      borderColor: alpha(theme.palette.primary.main, 0.5),
+                    },
+                  })}
+                >
+                  <Chip
+                    icon={<IconCamera size={14} />}
+                    label="Foto Karyawan"
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                    sx={{ mb: 2, fontWeight: 600 }}
+                  />
+
+                  <Badge
+                    overlap="circular"
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    badgeContent={
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => fileInputRef.current?.click()}
+                        sx={{
+                          backgroundColor: 'background.paper',
+                          border: '2px solid',
+                          borderColor: 'primary.main',
+                          boxShadow: 2,
+                          '&:hover': { bgcolor: 'primary.light', color: 'primary.contrastText' },
+                        }}
+                      >
+                        <IconCamera size={16} />
+                      </IconButton>
+                    }
+                  >
+                    <Avatar
+                      src={photoPreview || undefined}
+                      alt={values.NamaLengkap || 'Foto'}
+                      sx={{
+                        width: 128,
+                        height: 128,
+                        border: '3px solid',
+                        borderColor: photoPreview ? 'primary.main' : 'divider',
+                        bgcolor: photoPreview ? 'transparent' : 'action.selected',
+                        fontSize: 44,
+                        boxShadow: photoPreview ? 6 : 1,
+                      }}
+                    >
+                      {!photoPreview && (values.NamaLengkap?.charAt(0) || '?')}
+                    </Avatar>
+                  </Badge>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    style={{ display: 'none' }}
+                  />
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    textAlign="center"
+                    mt={2}
+                    mb={1.5}
+                  >
+                    JPG atau PNG, maks. 2MB
+                  </Typography>
+
+                  <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center">
+                    <Button
+                      size="small"
+                      variant={photoPreview ? 'outlined' : 'contained'}
+                      onClick={() => fileInputRef.current?.click()}
+                      startIcon={<IconCamera size={16} />}
+                    >
+                      {photoPreview ? 'Ganti Foto' : 'Upload Foto'}
+                    </Button>
+                    {photoPreview && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={handleRemovePhoto}
+                        startIcon={<IconX size={16} />}
+                      >
+                        Hapus
+                      </Button>
+                    )}
+                  </Stack>
+                </Paper>
+              </Grid>
+
+              {/* —— Fakta Integritas —— */}
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Paper
+                  elevation={0}
+                  sx={(theme) => ({
+                    p: 2.5,
+                    height: '100%',
+                    minHeight: 300,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: hasFakta
+                      ? alpha(theme.palette.error.main, 0.35)
+                      : theme.palette.divider,
+                    background: `linear-gradient(160deg, ${alpha(theme.palette.error.main, 0.06)} 0%, ${theme.palette.background.paper} 55%)`,
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      boxShadow: theme.shadows[4],
+                      borderColor: hasFakta
+                        ? alpha(theme.palette.error.main, 0.45)
+                        : alpha(theme.palette.divider, 1),
+                    },
+                  })}
+                >
+                  <Chip
+                    icon={<IconFileTypePdf size={14} />}
+                    label="Fakta Integritas"
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                    sx={{ mb: 2, fontWeight: 600 }}
+                  />
+
+                  <Box
+                    onClick={hasFakta ? handleOpenFaktaPreview : undefined}
+                    sx={(theme) => ({
+                      width: 128,
+                      height: 128,
+                      borderRadius: 2,
+                      border: '3px solid',
+                      borderColor: hasFakta
+                        ? alpha(theme.palette.error.main, 0.6)
+                        : theme.palette.divider,
+                      overflow: 'hidden',
+                      cursor: hasFakta ? 'pointer' : 'default',
+                      bgcolor: alpha(theme.palette.action.hover, 0.5),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      boxShadow: hasFakta ? 4 : 0,
+                      '&:hover .fakta-preview-overlay': hasFakta
+                        ? { opacity: 1 }
+                        : undefined,
+                    })}
+                  >
+                    {hasFakta && faktaThumbnailUrl ? (
+                      <iframe
+                        src={`${faktaThumbnailUrl}#toolbar=0&navpanes=0`}
+                        title="Thumbnail fakta integritas"
+                        width="100%"
+                        height="100%"
+                        style={{ border: 'none', pointerEvents: 'none' }}
+                      />
+                    ) : (
+                      <Stack alignItems="center" spacing={0.5}>
+                        <IconFileTypePdf size={40} stroke={1.2} color="#bdbdbd" />
+                        <Typography variant="caption" color="text.disabled" fontSize={10}>
+                          Belum ada PDF
+                        </Typography>
+                      </Stack>
+                    )}
+
+                    {hasFakta && (
+                      <Box
+                        className="fakta-preview-overlay"
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexDirection: 'column',
+                          gap: 0.5,
+                          bgcolor: 'rgba(0,0,0,0.45)',
+                          color: '#fff',
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
+                        }}
+                      >
+                        <IconEye size={28} />
+                        <Typography variant="caption" fontWeight={600}>
+                          Preview
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+
+                  <input
+                    ref={docInputRef}
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    onChange={handleFaktaUpload}
+                    style={{ display: 'none' }}
+                  />
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    textAlign="center"
+                    mt={2}
+                    mb={1.5}
+                    sx={{ px: 1 }}
+                  >
+                    PDF maks. 2MB
+                    {values.Noktp?.trim() ? (
+                      <>
+                        <br />
+                        <Box
+                          component="span"
+                          sx={{
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: 'text.primary',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {values.Noktp.trim()}.pdf
+                        </Box>
+                      </>
+                    ) : null}
+                  </Typography>
+
+                  <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center">
+                    <Button
+                      size="small"
+                      variant={hasFakta ? 'outlined' : 'contained'}
+                      color="error"
+                      disabled={faktaUploading || !values.Noktp?.trim()}
+                      onClick={() => docInputRef.current?.click()}
+                      startIcon={
+                        faktaUploading ? (
+                          <CircularProgress size={14} color="inherit" />
+                        ) : (
+                          <IconUpload size={16} />
+                        )
+                      }
+                    >
+                      {hasFakta ? 'Ganti PDF' : 'Upload PDF'}
+                    </Button>
+                    {hasFakta && (
+                      <>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="inherit"
+                          onClick={handleOpenFaktaPreview}
+                          startIcon={<IconEye size={16} />}
+                        >
+                          Lihat
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          disabled={faktaUploading}
+                          onClick={handleRemoveFakta}
+                          startIcon={<IconX size={16} />}
+                        >
+                          Hapus
+                        </Button>
+                      </>
+                    )}
+                  </Stack>
+
+                  {!values.Noktp?.trim() && (
+                    <Typography
+                      variant="caption"
+                      color="warning.main"
+                      textAlign="center"
+                      mt={1}
+                      fontSize={10}
+                    >
+                      Isi No KTP terlebih dahulu
+                    </Typography>
+                  )}
+                </Paper>
+              </Grid>
+            </Grid>
           </Box>
 
           {/* ================= FORM FIELDS ================= */}
@@ -719,14 +1092,14 @@ const FormMasterKtp: React.FC<Props> = ({
                   sx={inputCompactStyle}
                 />
 
-                {/* <TextField
+                <TextField
                   fullWidth
                   size="small"
                   label="Titip Ijazah"
                   value={values.TitipIjazah ?? ''}
                   onChange={setField('TitipIjazah')}
                   sx={inputCompactStyle}
-                /> */}
+                />
 
                 <Divider sx={{ my: 1 }} />
 
@@ -852,6 +1225,16 @@ const FormMasterKtp: React.FC<Props> = ({
           </Box>
         </DialogActions>
       </form>
+
+      <PdfPreviewDialog
+        open={pdfPreviewOpen}
+        base64Pdf={pdfPreviewBase64}
+        title="Preview Fakta Integritas"
+        onClose={() => {
+          setPdfPreviewOpen(false)
+          setPdfPreviewBase64(null)
+        }}
+      />
     </Dialog>
   )
 }

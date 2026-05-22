@@ -375,6 +375,18 @@ const FormCutiKaryawan: React.FC<Props> = ({
     }
     if (!values.Keperluan) err.Keperluan = 'Keperluan wajib diisi'
 
+    const today = dayjs().startOf('day')
+    const hasBackdate = values.DetailTanggal.some((t) =>
+      dayjs(t).isBefore(today, 'day')
+    )
+    if (!isEdit && hasBackdate) {
+      showSnackbar(
+        'Tanggal cuti tidak boleh backdate (pilih hari ini atau tanggal mendatang).',
+        'error'
+      )
+      return
+    }
+
     setErrors(err)
     if (Object.keys(err).length > 0) return
 
@@ -413,6 +425,7 @@ const FormCutiKaryawan: React.FC<Props> = ({
         subtitle="Pengisian dan pengelolaan informasi cuti karyawan"
         statusLabel={isEdit ? 'EDIT' : 'CREATE'}
         statusColor={isEdit ? 'info' : 'warning'}
+        onClose={onClose}
       />
 
       <Divider />
@@ -1000,12 +1013,20 @@ const FormCutiKaryawan: React.FC<Props> = ({
 									<DatePicker
 										label="Tambah Tanggal Cuti"
 										value={null}
+										minDate={dayjs().startOf('day')}
 										onChange={(v) => {
 											if (!v) return
 
+											if (v.isBefore(dayjs(), 'day')) {
+												showSnackbar(
+													'Tanggal cuti tidak boleh backdate (pilih hari ini atau tanggal mendatang).',
+													'warning'
+												)
+												return
+											}
+
 											const tgl = v.format("YYYY-MM-DD")
 
-											// 🔥 OPTIONAL: block weekend
 											const day = v.day()
 											if (day === 0 || day === 6) {
 												showSnackbar("Tidak bisa pilih hari Sabtu/Minggu", "warning")
@@ -1033,12 +1054,12 @@ const FormCutiKaryawan: React.FC<Props> = ({
 											})
 										}}
 										shouldDisableDate={(date) => {
+											if (date.isBefore(dayjs(), 'day')) return true
+
 											const tgl = date.format("YYYY-MM-DD")
 
-											// 🔥 disable kalau sudah dipilih
 											if (values.DetailTanggal.includes(tgl)) return true
 
-											// 🔥 disable weekend
 											const day = date.day()
 											if (day === 0 || day === 6) return true
 
@@ -1053,6 +1074,9 @@ const FormCutiKaryawan: React.FC<Props> = ({
 										}}
 									/>
 								</LocalizationProvider>
+								<Typography fontSize={11} color="text.secondary" mt={0.5}>
+									Hanya hari ini ke depan (tidak boleh backdate). Sabtu/Minggu tidak dapat dipilih.
+								</Typography>
 								<Box mt={2}>
 									<Typography fontSize={12} color="text.secondary">
 										Detail Tanggal Cuti

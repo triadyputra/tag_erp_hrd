@@ -307,6 +307,7 @@ const FormPacklaring: React.FC<Props> = ({ id, onClose, onSubmit }) => {
         subtitle="Pengisian dan pengelolaan informasi packlaring"
         statusLabel={isEdit ? 'EDIT' : 'CREATE'}
         statusColor={isEdit ? 'info' : 'warning'}
+        onClose={onClose}
       />
 
       <Divider />

@@ -13,6 +13,7 @@ using tagApiHrd.Model.Dto.legal;
 using tagApiHrd.Model.Dto.mobile;
 using tagApiHrd.Model.Dto.report;
 using tagApiHrd.Report.Hrd;
+using tagApiHrd.Services.Berita;
 using tagApiHrd.Services.Legal;
 
 namespace tagApiHrd.Controllers.Mobile
@@ -26,13 +27,16 @@ namespace tagApiHrd.Controllers.Mobile
         private readonly IRepoPacklaring _repoPacklaring;
         private readonly UserManager<ApplicationUser> userManager;
         private readonly string _ttdPath;
-        public MobileHrController(IRepoHrd repo, IRepoPacklaring repoPacklaring, UserManager<ApplicationUser> userManager, IConfiguration configuration)
+        private readonly IBeritaService _beritaService;
+
+        public MobileHrController(IRepoHrd repo, IRepoPacklaring repoPacklaring, UserManager<ApplicationUser> userManager, IConfiguration configuration, IBeritaService beritaService)
         {
             _repo = repo;
             _repoPacklaring = repoPacklaring;
             this.userManager = userManager;
             // 🔥 ambil dari appsettings
             _ttdPath = configuration["FileStorage:TtdPath"] ?? "D:/TAG/Storage/";
+            _beritaService = beritaService;
         }
 
         [HttpGet("GetDetailKontrakMobile")]
@@ -243,6 +247,68 @@ namespace tagApiHrd.Controllers.Mobile
             }
         }
 
+        [HttpGet("GetTopBerita")]
+        public async Task<IActionResult> GetTopBerita()
+        {
+            try
+            {
+                var data =
+                    await _beritaService.GetTopBerita();
+
+                return Ok(
+                    ApiResponse<object>.Success(
+                        data
+                    )
+                );
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(
+                    ApiResponse<object>.Error(
+                        ex.Message,
+                        "500"
+                    )
+                );
+            }
+        }
+
+        [HttpGet("GetDetailBerita/{id}")]
+        public async Task<IActionResult> GetDetailBerita(
+            int id)
+        {
+            try
+            {
+                var result =
+                    await _beritaService.GetDetailBerita(id);
+
+                if (result == null)
+                {
+                    return NotFound(
+                        ApiResponse<object>.Error(
+                            "Data berita tidak ditemukan",
+                            "404"
+                        )
+                    );
+                }
+
+                return Ok(
+                    ApiResponse<object>.Success(
+                        result,
+                        "Berhasil mengambil detail berita"
+                    )
+                );
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(
+                    ApiResponse<object>.Error(
+                        ex.Message,
+                        "500"
+                    )
+                );
+            }
+        }
+
 
         private string CleanFileName(string input)
         {
@@ -291,6 +357,14 @@ namespace tagApiHrd.Controllers.Mobile
                 // =========================
                 foreach (var date in request.TanggalCuti)
                 {
+                    if (date.Date < DateTime.Today)
+                    {
+                        return BadRequest(ApiResponse<object>.Error(
+                            "Tanggal cuti tidak boleh backdate (pilih hari ini atau tanggal mendatang).",
+                            "400"
+                        ));
+                    }
+
                     if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
                     {
                         return BadRequest(ApiResponse<object>.Error(
