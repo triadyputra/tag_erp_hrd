@@ -23,10 +23,11 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material'
-import { IconEdit, IconSearch, IconTrash } from '@tabler/icons-react'
+import { IconEdit, IconId, IconSearch, IconTrash } from '@tabler/icons-react'
 import useSWR from 'swr'
 import { useComboCabangWith } from '@/hooks/useComboGroup'
 import { deleteMasterKtp, fetchMasterKtp, saveMasterKtp } from '@/services/master-data/master-ktp.service'
+import DialogUpdateNomorKtp from './DialogUpdateNomorKtp'
 import { getCabang } from '@/helpers/auth.helper'
 import AccessButton from '@/app/components/buttons/AccessButton'
 import { AddRounded } from '@mui/icons-material'
@@ -58,6 +59,9 @@ const MasterKtpListComponent = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
   const [selectedDelete, setSelectedDelete] = useState<any>(null)
   const [loadingDelete, setLoadingDelete] = useState(false)
+
+  const [openUpdateNomorDialog, setOpenUpdateNomorDialog] = useState(false)
+  const [selectedUpdateNomor, setSelectedUpdateNomor] = useState<any>(null)
   
   const { data, isLoading, mutate } = useSWR(
     ['master-ktp', filterNoktp, filterNama, filterCabang, page, pageSize],
@@ -373,6 +377,18 @@ const MasterKtpListComponent = () => {
                         </AccessButton>
 
                         <AccessButton
+                          access={{ subject: "MasterKtp", action: "UpdateNomorKtp" }}
+                          color="warning"
+                          type="icon"
+                          onClick={() => {
+                            setSelectedUpdateNomor(item)
+                            setOpenUpdateNomorDialog(true)
+                          }}
+                        >
+                          <IconId width={18} />
+                        </AccessButton>
+
+                        <AccessButton
                           access={{ subject: "MasterKtp", action: "DeleteDataKtp" }}
                           color="error"
                           type="icon"
@@ -443,13 +459,26 @@ const MasterKtpListComponent = () => {
         />
       )}
       
+      <DialogUpdateNomorKtp
+        open={openUpdateNomorDialog}
+        row={selectedUpdateNomor}
+        onClose={() => {
+          setOpenUpdateNomorDialog(false)
+          setSelectedUpdateNomor(null)
+        }}
+        onSuccess={async () => {
+          showSnackbar('Nomor KTP berhasil diperbarui', 'success')
+          await mutate()
+        }}
+      />
+
       <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
         <DialogTitle>Konfirmasi Hapus</DialogTitle>
         <DialogContent>Apakah Anda yakin ingin menghapus data yang dipilih?</DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDeleteDialog(false)}>Batal</Button>
-          <Button color="error" onClick={handleConfirmDelete}>
-            Hapus
+          <Button color="error" onClick={handleConfirmDelete} disabled={loadingDelete}>
+            {loadingDelete ? 'Menghapus...' : 'Hapus'}
           </Button>
         </DialogActions>
       </Dialog>

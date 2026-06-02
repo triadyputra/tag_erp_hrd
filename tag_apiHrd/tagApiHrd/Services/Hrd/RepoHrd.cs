@@ -25,6 +25,8 @@ namespace tagApi.Services.Hrd
             string? jenisKontrak,
             string? cabang,
             string? sisaKontrak,
+            DateTime? tglBerakhirAwal,
+            DateTime? tglBerakhirAkhir,
             int page,
             int pageSize)
         {
@@ -43,6 +45,8 @@ namespace tagApi.Services.Hrd
                 parameters.Add("@cnmkaryawan", string.IsNullOrWhiteSpace(namaKaryawan) ? null : namaKaryawan);
                 parameters.Add("@cjnskontrak", string.IsNullOrWhiteSpace(jenisKontrak) ? null : jenisKontrak);
                 parameters.Add("@SisaKontrakFilter", string.IsNullOrWhiteSpace(sisaKontrak) ? null : sisaKontrak);
+                parameters.Add("@ctglakhirawal", tglBerakhirAwal?.Date);
+                parameters.Add("@ctglakhirakhir", tglBerakhirAkhir?.Date);
                 parameters.Add("@PageNumber", page);
                 parameters.Add("@PageSize", pageSize);
 
@@ -81,6 +85,137 @@ namespace tagApi.Services.Hrd
                 // 🔥 lempar ke atas (biar controller handle)
                 throw new Exception(
                     $"Gagal mengambil data kontrak aktif. {ex.Message}",
+                    ex
+                );
+            }
+        }
+
+        public async Task<PagedResult<KaryawanTetapListDto>> ListKaryawanTetap(
+            string? noKtp,
+            string? namaLengkap,
+            string? kdCabang,
+            int page,
+            int pageSize)
+        {
+            try
+            {
+                if (page < 1) page = 1;
+                if (pageSize < 1) pageSize = 10;
+                if (pageSize > 100) pageSize = 100;
+
+                using var connection = _context.CreateConnection();
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@NoKtp",
+                    string.IsNullOrWhiteSpace(noKtp) ? null : noKtp.Trim());
+                parameters.Add("@NamaLengkap",
+                    string.IsNullOrWhiteSpace(namaLengkap) ? null : namaLengkap.Trim());
+                parameters.Add("@KdCabang",
+                    string.IsNullOrWhiteSpace(kdCabang) ? null : kdCabang.Trim());
+                parameters.Add("@PageNumber", page);
+                parameters.Add("@PageSize", pageSize);
+
+                using var multi = await connection.QueryMultipleAsync(
+                    "dbo.Web_Asp_ViewDataKaryawanTetap",
+                    parameters,
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 120
+                );
+
+                var total = await multi.ReadFirstOrDefaultAsync<int>();
+                var data = (await multi.ReadAsync<KaryawanTetapListDto>()).ToList();
+
+                //foreach (var item in data)
+                //{
+                //    if (item.Foto != null && item.Foto.Length > 0)
+                //    {
+                //        item.FotoBase64 =
+                //            $"data:image/jpeg;base64,{Convert.ToBase64String(item.Foto)}";
+                //    }
+                //}
+
+                return new PagedResult<KaryawanTetapListDto>
+                {
+                    Data = data,
+                    Total = total
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("ERROR ListKaryawanTetap:");
+                Console.WriteLine(ex.Message);
+
+                throw new Exception(
+                    $"Gagal mengambil data karyawan tetap. {ex.Message}",
+                    ex
+                );
+            }
+        }
+
+        public async Task<KaryawanTetapListDto?> GetDetailKaryawanTetap(string noktp)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(noktp))
+                    return null;
+
+                using var connection = _context.CreateConnection();
+
+                const string sql = @"
+                    SELECT
+                        A.NOKTP         AS Noktp,
+                        A.NIKSISTAG     AS NikSistag,
+                        A.NAMALENGKAP   AS NamaLengkap,
+                        A.KELAMIN       AS Kelamin,
+                        A.TEMPATLAHIR   AS TempatLahir,
+                        A.TGLLAHIR      AS TglLahir,
+                        A.ALAMAT        AS Alamat,
+                        A.PENDIDIKAN    AS Pendidikan,
+                        A.AGAMA         AS Agama,
+                        A.PERKAWINAN    AS Perkawinan,
+                        A.FOTO          AS Foto,
+                        A.IDFINGER      AS IdFinger,
+                        A.TGLMASUK      AS TglMasuk,
+                        A.KDCABANG      AS KdCabang,
+                        A.NMCABANG      AS NmCabang,
+                        A.NMBANK        AS NmBank,
+                        A.NOREKENING    AS NoRekening,
+                        A.NOTELEPON     AS NoTelepon,
+                        A.KDDIVISI      AS KdDivisi,
+                        A.NMDIVISI      AS NmDivisi,
+                        A.KDBAGIAN      AS KdBagian,
+                        A.NMBAGIAN      AS NmBagian,
+                        A.KDSUBBAGIAN   AS KdSubBagian,
+                        A.NMSUBBAGIAN   AS NmSubBagian,
+                        A.KDJABATAN     AS KdJabatan,
+                        A.NMJABATAN     AS NmJabatan,
+                        A.VALIDUSER     AS ValidUser,
+                        A.NOKONTRAK     AS NoKontrak,
+                        A.NOSK          AS NoSk,
+                        A.TGLSK         AS TglSk,
+                        A.NOIM          AS NoIm,
+                        A.TGLINPUT      AS TglInput
+                    FROM HRDTAG.dbo.MST_KARYAWANTETAP A
+                    WHERE A.NOKTP = @noktp
+                    ";
+
+                var data = await connection.QueryFirstOrDefaultAsync<KaryawanTetapListDto>(
+                    sql,
+                    new { noktp = noktp.Trim() }
+                );
+
+                if (data?.Foto != null && data.Foto.Length > 0)
+                {
+                    data.FotoBase64 =
+                        $"data:image/jpeg;base64,{Convert.ToBase64String(data.Foto)}";
+                }
+
+                return data;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(
+                    $"Gagal mengambil detail karyawan tetap. {ex.Message}",
                     ex
                 );
             }
@@ -238,7 +373,9 @@ namespace tagApi.Services.Hrd
             string? cnokontrak,
             string? cnmkaryawan,
             string? cjnskontrak,
-            string? sisaKontrakFilter
+            string? sisaKontrakFilter,
+            DateTime? tglBerakhirAwal,
+            DateTime? tglBerakhirAkhir
         )
         {
             using var connection = _context.CreateConnection();
@@ -250,6 +387,8 @@ namespace tagApi.Services.Hrd
             parameters.Add("@cnmkaryawan", cnmkaryawan, DbType.String);
             parameters.Add("@cjnskontrak", cjnskontrak, DbType.String);
             parameters.Add("@SisaKontrakFilter", sisaKontrakFilter, DbType.String);
+            parameters.Add("@ctglakhirawal", tglBerakhirAwal?.Date);
+            parameters.Add("@ctglakhirakhir", tglBerakhirAkhir?.Date);
 
             var result = await connection.QueryAsync<ReportDataKontrakAktifDto>(
                 "dbo.Web_Asp_ReportDataKontrakAktifAll",
@@ -267,7 +406,9 @@ namespace tagApi.Services.Hrd
         string? namaKaryawan,
         string? jenisKontrak,
         string? cabang,
-        string? sisaKontrak)
+        string? sisaKontrak,
+        DateTime? tglBerakhirAwal,
+        DateTime? tglBerakhirAkhir)
         {
             try
             {
@@ -281,6 +422,8 @@ namespace tagApi.Services.Hrd
                 parameters.Add("@cnmkaryawan", string.IsNullOrWhiteSpace(namaKaryawan) ? null : namaKaryawan);
                 parameters.Add("@cjnskontrak", string.IsNullOrWhiteSpace(jenisKontrak) ? null : jenisKontrak);
                 parameters.Add("@SisaKontrakFilter", string.IsNullOrWhiteSpace(sisaKontrak) ? null : sisaKontrak);
+                parameters.Add("@ctglakhirawal", tglBerakhirAwal?.Date);
+                parameters.Add("@ctglakhirakhir", tglBerakhirAkhir?.Date);
 
                 var data = (await connection.QueryAsync<ReportDataKontrakAktifDto>(
                     procedureName,
@@ -489,6 +632,7 @@ namespace tagApi.Services.Hrd
         string? kdCabang,
         string? namaKaryawan,
         string? perusahaan,
+        int? statusTtd,
         int page,
         int pageSize)
         {
@@ -508,13 +652,19 @@ namespace tagApi.Services.Hrd
                         AND (@tglAkhir IS NULL OR TGLINPUT <= @tglAkhir)
                         AND (@kdCabang IS NULL OR KDCABANG = @kdCabang)
                         AND (@nama IS NULL OR NMKARYAWAN LIKE '%' + @nama + '%')
-                        AND (@perusahaan IS NULL OR NMPERUSAHAAN LIKE '%' + @perusahaan + '%');
+                        AND (@perusahaan IS NULL OR NMPERUSAHAAN LIKE '%' + @perusahaan + '%')
+                        AND (
+                            @statusTtd IS NULL
+                            OR (@statusTtd = 0 AND (ttd = 0 OR ttd IS NULL))
+                            OR (@statusTtd <> 0 AND ttd = @statusTtd)
+                        );
 
                     -- ================= DATA =================
                     SELECT NOKONTRAK, TGLINPUT, NOKTP, NMKARYAWAN, TEMPATLAHIR, TGLLAHIR, ALAMAT, KELAMIN, PENDIDIKAN, PERKAWINAN, AGAMA, 
                            KDCABANG, NMCABANG, NIKSISTAG, IDFINGER, NMBANK, NOREKENING, NOHANDPHONE, TGLMASUK, KDDIVISI, NMDIVISI, KDBAGIAN, 
                            NMBAGIAN, KDSUBBAGIAN, NMSUBBAGIAN, KDJABATAN, NMJABATAN, PERIODE, PAWAL, PAKHIR, NMPERUSAHAAN, JNSKONTRAK, 
-                           KATEGORIGAJI, JNSGAJI, NONPWP, PPH21, ISJAMINANBPJS, NOBPJSTK, NOBPJSKSH, NOBPJSJHT, NOSURATTUGAS, KETERANGAN, VALIDUSER
+                           KATEGORIGAJI, JNSGAJI, NONPWP, PPH21, ISJAMINANBPJS, NOBPJSTK, NOBPJSKSH, NOBPJSJHT, NOSURATTUGAS, KETERANGAN, VALIDUSER,
+                           ttd AS Status
                     FROM dbo.TRX_KONTRAKKARYAWAN
                     WHERE
                         (@tglAwal IS NULL OR TGLINPUT >= @tglAwal)
@@ -522,6 +672,11 @@ namespace tagApi.Services.Hrd
                         AND (@kdCabang IS NULL OR KDCABANG = @kdCabang)
                         AND (@nama IS NULL OR NMKARYAWAN LIKE '%' + @nama + '%')
                         AND (@perusahaan IS NULL OR NMPERUSAHAAN LIKE '%' + @perusahaan + '%')
+                        AND (
+                            @statusTtd IS NULL
+                            OR (@statusTtd = 0 AND (ttd = 0 OR ttd IS NULL))
+                            OR (@statusTtd <> 0 AND ttd = @statusTtd)
+                        )
                     ORDER BY TGLINPUT DESC
                     OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
                     ";
@@ -532,6 +687,7 @@ namespace tagApi.Services.Hrd
                 parameters.Add("@kdCabang", string.IsNullOrWhiteSpace(kdCabang) ? null : kdCabang);
                 parameters.Add("@nama", string.IsNullOrWhiteSpace(namaKaryawan) ? null : namaKaryawan);
                 parameters.Add("@perusahaan", string.IsNullOrWhiteSpace(perusahaan) ? null : perusahaan);
+                parameters.Add("@statusTtd", statusTtd);
                 parameters.Add("@offset", (page - 1) * pageSize);
                 parameters.Add("@pageSize", pageSize);
 
@@ -723,18 +879,17 @@ namespace tagApi.Services.Hrd
             }
         }
 
-        public async Task<int> UpdateStatusTtd(string noKontrak)
+        public async Task<int> UpdateStatusTtd(string noKontrak, int status = 1)
         {
             using var connection = _context.CreateConnection();
 
             var param = new DynamicParameters();
             param.Add("@nokontrak", noKontrak);
-
-            // 🔥 ambil return value
+            param.Add("@status", status);
             param.Add("returnValue", dbType: DbType.Int32, direction: ParameterDirection.ReturnValue);
 
             await connection.ExecuteAsync(
-                "Web_Asp_UpdateStatusKontrak",
+                "dbo.Web_Asp_UpdateStatusKontrak",
                 param,
                 commandType: CommandType.StoredProcedure
             );

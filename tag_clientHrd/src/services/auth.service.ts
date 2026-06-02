@@ -208,9 +208,9 @@ export async function logout(): Promise<void> {
 }
 
 type ChangePasswordPayload = {
-  username?: string
-  oldPassword: string
-  newPassword: string
+  CurrentPassword: string
+  NewPassword: string
+  ConfimrNewPassword: string
 }
 
 type ChangePasswordResponse = {
@@ -234,10 +234,12 @@ function pickErrorMessage(json: any, fallback: string) {
 }
 
 export async function changePassword(payload: ChangePasswordPayload) {
-  if (!payload?.oldPassword?.trim()) throw new Error('Password lama wajib diisi')
-  if (!payload?.newPassword?.trim()) throw new Error('Password baru wajib diisi')
+  if (!payload?.CurrentPassword?.trim()) throw new Error('Password lama wajib diisi')
+  if (!payload?.NewPassword?.trim()) throw new Error('Password baru wajib diisi')
+  if (!payload?.ConfimrNewPassword?.trim()) throw new Error('Konfirmasi password wajib diisi')
 
   const endpoints = [
+    `${BASE_URL}Profile/change-password`,
     `${BASE_URL}Auth/ChangePassword`,
     `${BASE_URL}Auth/change-password`,
     `${BASE_URL}Auth/Change-Password`,

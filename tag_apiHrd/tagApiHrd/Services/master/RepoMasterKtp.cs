@@ -199,6 +199,70 @@ namespace tagApiHrd.Services.master
             }
         }
 
+        // ===============================
+        // UPDATE NOMOR KTP
+        // ===============================
+        public async Task<ApiResponse<object>> UpdateNomorKtp(
+            UpdateNomorKtpDto dto)
+        {
+            try
+            {
+                var noktpLama = (dto.NoktpLama ?? "").Trim();
+                var noktpBaru = (dto.NoktpBaru ?? "").Trim();
+
+                if (string.IsNullOrEmpty(noktpLama) ||
+                    string.IsNullOrEmpty(noktpBaru))
+                {
+                    return ApiResponse<object>.Error(
+                        "Nomor KTP lama dan baru wajib diisi.",
+                        "400"
+                    );
+                }
+
+                if (string.Equals(
+                    noktpLama,
+                    noktpBaru,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return ApiResponse<object>.Error(
+                        "Nomor KTP baru harus berbeda dari nomor lama.",
+                        "400"
+                    );
+                }
+
+                using var connection =
+                    _context.CreateConnection();
+
+                var param = new DynamicParameters();
+
+                param.Add("@noktplama", noktpLama);
+                param.Add("@noktpbaru", noktpBaru);
+
+                await connection.ExecuteAsync(
+                    "dbo.Asp_UpdateNomorKTP",
+                    param,
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 120
+                );
+
+                return ApiResponse<object>.Success(
+                    new
+                    {
+                        NoktpLama = noktpLama,
+                        NoktpBaru = noktpBaru
+                    },
+                    "Nomor KTP berhasil diperbarui"
+                );
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<object>.Error(
+                    ex.InnerException?.Message ?? ex.Message,
+                    "500"
+                );
+            }
+        }
+
 
         // ===============================
         // DELETE

@@ -3,6 +3,7 @@ import type {
   AccessItem,
   MenuItem,
 } from '@/services/auth.service'
+import { patchHrdMonitoringMenu } from '@/utils/hrdMenuPatch'
 
 // ---------- SAFE CHECK ----------
 function isBrowser(): boolean {
@@ -62,7 +63,17 @@ export function getAuthMenu(): MenuItem[] {
   if (!isBrowser()) return []
 
   const raw = localStorage.getItem('auth_menu')
-  return raw ? JSON.parse(raw) : []
+  const menu: MenuItem[] = raw ? JSON.parse(raw) : []
+  return patchHrdMonitoringMenu(menu)
+}
+
+/** Simpan menu auth + patch submenu Monitoring (Karyawan Tetap di atas). */
+export function setAuthMenu(menu: MenuItem[]) {
+  if (!isBrowser()) return
+  localStorage.setItem(
+    'auth_menu',
+    JSON.stringify(patchHrdMonitoringMenu(menu))
+  )
 }
 
 // ---------- LOGOUT ----------

@@ -4,7 +4,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getMe } from "@/services/auth.service";
-import { clearAuth } from "@/helpers/auth.helper";
+import { clearAuth, setAuthMenu } from "@/helpers/auth.helper";
 
 const publicPaths = ["/auth"];
 
@@ -41,7 +41,7 @@ export default function AuthGuard({
         .then((me) => {
           localStorage.setItem("auth_user", JSON.stringify(me.user));
           localStorage.setItem("auth_access", JSON.stringify(me.acces));
-          localStorage.setItem("auth_menu", JSON.stringify(me.Menu));
+          setAuthMenu(me.Menu ?? []);
         })
         .catch(() => {
           // ❌ token invalid / expired

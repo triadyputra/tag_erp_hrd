@@ -18,14 +18,16 @@ import {
   Chip,
 	TableContainer,
 	Paper,
-	Grid,
 	Button,
-	FormControl,
-	InputLabel,
-	Select,
-	MenuItem,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	Badge,
 } from '@mui/material'
-import { IconSearch } from '@tabler/icons-react'
+import { IconFilter, IconSearch } from '@tabler/icons-react'
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import useSWR from 'swr'
 import { useComboCabangWith } from '@/hooks/useComboGroup'
 import { fetchKontrakAktif, printDataKaryawan } from '@/services/hrd/kontrak.service'
@@ -47,6 +49,8 @@ const KontrakKaryawanListComponent = () => {
 	const [inputJenis, setInputJenis] = useState('')
 	const [inputCabang, setInputCabang] = useState('')
 	const [inputSisaKontrak, setInputSisaKontrak] = useState('')
+	const [inputTglBerakhirAwal, setInputTglBerakhirAwal] = useState<string | null>(null)
+	const [inputTglBerakhirAkhir, setInputTglBerakhirAkhir] = useState<string | null>(null)
 
 	// FILTER STATE (yang dipakai API)
 	const [filterKontrak, setFilterKontrak] = useState('')
@@ -54,6 +58,8 @@ const KontrakKaryawanListComponent = () => {
 	const [filterJenis, setFilterJenis] = useState('')
 	const [filterCabang, setFilterCabang] = useState('')
 	const [filterSisaKontrak, setFilterSisaKontrak] = useState('')
+	const [filterTglBerakhirAwal, setFilterTglBerakhirAwal] = useState<string | null>(null)
+	const [filterTglBerakhirAkhir, setFilterTglBerakhirAkhir] = useState<string | null>(null)
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -64,16 +70,30 @@ const KontrakKaryawanListComponent = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
 
   const { data, isLoading, mutate } = useSWR(
-		['kontrak', filterKontrak, filterNama, filterJenis, filterCabang, filterSisaKontrak, page, pageSize],
+		[
+			'kontrak',
+			filterKontrak,
+			filterNama,
+			filterJenis,
+			filterCabang,
+			filterSisaKontrak,
+			filterTglBerakhirAwal,
+			filterTglBerakhirAkhir,
+			page,
+			pageSize,
+		],
 		() =>
 			fetchKontrakAktif({
 				noKontrak: filterKontrak,
 				namaKaryawan: filterNama,
 				jenisKontrak: filterJenis,
 				cabang: filterCabang,
-				sisaKontrak: filterSisaKontrak, // 🔥 TAMBAH
+				sisaKontrak: filterSisaKontrak,
+				tglBerakhirAwal: filterTglBerakhirAwal ?? '',
+				tglBerakhirAkhir: filterTglBerakhirAkhir ?? '',
 				page,
 				pageSize,
 			})
@@ -111,14 +131,64 @@ const KontrakKaryawanListComponent = () => {
 		{ title: "FREELANCE", value: "FREELANCE" },
 	];
 
-	const handleSearch = () => {
-		console.log(inputNama)
-		console.log(inputCabang)
+	const applyDateFilters = (awal: string | null, akhir: string | null) => {
+		if (awal && akhir && dayjs(awal).isAfter(dayjs(akhir), 'day')) {
+			showSnackbar(
+				'Tanggal berakhir awal tidak boleh lebih besar dari tanggal berakhir akhir',
+				'error'
+			)
+			return false
+		}
+		setFilterTglBerakhirAwal(awal)
+		setFilterTglBerakhirAkhir(akhir)
+		return true
+	}
+
+	const applyAllFilters = () => {
+		if (!applyDateFilters(inputTglBerakhirAwal, inputTglBerakhirAkhir)) return false
+
 		setFilterKontrak(inputKontrak)
 		setFilterNama(inputNama)
 		setFilterJenis(inputJenis)
 		setFilterCabang(inputCabang)
+		setFilterSisaKontrak(inputSisaKontrak)
 		setPage(1)
+		return true
+	}
+
+	const handleSearch = () => {
+		applyAllFilters()
+	}
+
+	const resetAllFilters = () => {
+		const cab = userCabang ?? ''
+
+		setInputKontrak('')
+		setInputNama('')
+		setInputJenis('')
+		setInputSisaKontrak('')
+		setInputCabang(cab)
+		setInputTglBerakhirAwal(null)
+		setInputTglBerakhirAkhir(null)
+
+		setFilterKontrak('')
+		setFilterNama('')
+		setFilterJenis('')
+		setFilterSisaKontrak('')
+		setFilterCabang(cab)
+		setFilterTglBerakhirAwal(null)
+		setFilterTglBerakhirAkhir(null)
+
+		setPage(1)
+	}
+
+	const advancedFilterCount = [filterKontrak, filterJenis, filterSisaKontrak].filter(
+		Boolean
+	).length
+
+	const compactFieldSx = {
+		minWidth: { xs: '100%', sm: 160 },
+		'& .MuiOutlinedInput-root': { height: 36 },
 	}
 
 	// const handlePrint = async (format: 'pdf' | 'excel') => {
@@ -153,21 +223,22 @@ const KontrakKaryawanListComponent = () => {
 					jenisKontrak: filterJenis,
 					cabang: filterCabang,
 					sisaKontrak: filterSisaKontrak,
+					tglBerakhirAwal: filterTglBerakhirAwal ?? '',
+					tglBerakhirAkhir: filterTglBerakhirAkhir ?? '',
 					format,
 				});
 
 				setPdfBase64(res.response);
 				setPreviewOpen(true);
 			} else {
-				// ===============================
-				// EXCEL DOWNLOAD
-				// ===============================
 				const res = await printDataKaryawan({
 					noKontrak: filterKontrak,
 					namaKaryawan: filterNama,
 					jenisKontrak: filterJenis,
 					cabang: filterCabang,
 					sisaKontrak: filterSisaKontrak,
+					tglBerakhirAwal: filterTglBerakhirAwal ?? '',
+					tglBerakhirAkhir: filterTglBerakhirAkhir ?? '',
 					format: 'xlsx',
 				});
 
@@ -202,49 +273,37 @@ const KontrakKaryawanListComponent = () => {
 
   return (
     <Box>
-      {/* ================= FILTER ================= */}
+      {/* ================= FILTER UTAMA ================= */}
 			<Stack
-				direction={{ xs: 'column', sm: 'row' }}
+				direction={{ xs: 'column', md: 'row' }}
 				spacing={1.2}
 				mb={3}
-				alignItems={{ xs: 'stretch', sm: 'flex-end' }}
+				alignItems={{ xs: 'stretch', md: 'flex-end' }}
 				justifyContent="space-between"
 			>
-
-				{/* ================= LEFT: FILTER ================= */}
 				<Stack
 					direction={{ xs: 'column', sm: 'row' }}
 					spacing={1.2}
-					sx={{ width: { xs: '100%', sm: 'auto' } }}
+					flexWrap="wrap"
+					sx={{ flex: 1 }}
 				>
-
-					{/* ================= NO KONTRAK ================= */}
 					<TextField
-						placeholder="Cari No Kontrak"
+						placeholder="Cari Nama Karyawan"
 						size="small"
-						value={inputKontrak}
-
-						onChange={(e) => setInputKontrak(e.target.value)}
-
+						value={inputNama}
+						onChange={(e) => setInputNama(e.target.value)}
 						onKeyDown={(e) => {
-							if (e.key === "Enter") handleSearch()
+							if (e.key === 'Enter') handleSearch()
 						}}
-
 						onBlur={() => {
-							if (inputKontrak !== filterKontrak) handleSearch()
+							if (inputNama !== filterNama) handleSearch()
 						}}
-
-						fullWidth
-						sx={{
-							minWidth: { xs: '100%', sm: 200 },
-							"& .MuiOutlinedInput-root": { height: 36 },
-						}}
-
+						sx={compactFieldSx}
 						InputProps={{
 							endAdornment: (
 								<InputAdornment
 									position="end"
-									sx={{ cursor: "pointer" }}
+									sx={{ cursor: 'pointer' }}
 									onClick={handleSearch}
 								>
 									<IconSearch size={16} />
@@ -253,60 +312,6 @@ const KontrakKaryawanListComponent = () => {
 						}}
 					/>
 
-					{/* ================= NAMA ================= */}
-					<TextField
-						placeholder="Cari Nama Karyawan"
-						size="small"
-						value={inputNama}
-
-						onChange={(e) => setInputNama(e.target.value)}
-
-						onKeyDown={(e) => {
-							if (e.key === "Enter") handleSearch()
-						}}
-
-						onBlur={() => {
-							if (inputNama !== filterNama) handleSearch()
-						}}
-
-						fullWidth
-						sx={{
-							minWidth: { xs: '100%', sm: 220 },
-							"& .MuiOutlinedInput-root": { height: 36 },
-						}}
-					/>
-
-					{/* ================= JENIS ================= */}
-					<Autocomplete
-						options={jenisOptions}
-						value={
-							jenisOptions.find((c) => c.value === inputJenis) ?? null
-						}
-						isOptionEqualToValue={(opt, val) => opt.value === val.value}
-						onChange={(_, v) => {
-							const value = v?.value ?? ""
-
-							setInputJenis(value)
-
-							setFilterKontrak(inputKontrak)
-							setFilterNama(inputNama)
-							setFilterJenis(value)
-							setFilterCabang(inputCabang)
-							setFilterSisaKontrak(inputSisaKontrak)
-							setPage(1)
-						}}
-						getOptionLabel={(o) => o.title ?? ""}
-						fullWidth
-						sx={{
-							minWidth: { xs: '100%', sm: 180 },
-							"& .MuiOutlinedInput-root": { height: 36 },
-						}}
-						renderInput={(params) => (
-							<TextField {...params} size="small" placeholder="Jenis Kontrak" />
-						)}
-					/>
-
-					{/* ================= CABANG ================= */}
 					{!userCabang && (
 						<Autocomplete
 							options={cabangOptions ?? []}
@@ -317,90 +322,163 @@ const KontrakKaryawanListComponent = () => {
 							}
 							onChange={(_, v) => {
 								const val = v?.value ?? ''
-				
 								setInputCabang(val)
 								setFilterCabang(val)
+								setFilterNama(inputNama)
 								setPage(1)
 							}}
-							fullWidth
-							sx={{ minWidth: { xs: '100%', sm: 220 } }}
+							sx={{ ...compactFieldSx, minWidth: { xs: '100%', sm: 180 } }}
 							renderInput={(params) => (
-							<TextField {...params} size="small" placeholder="Cabang" />
+								<TextField {...params} size="small" placeholder="Cabang" />
 							)}
 						/>
 					)}
 
-					<Autocomplete
-						options={sisaKontrakOptions}
-						value={
-							sisaKontrakOptions.find((c) => c.value === inputSisaKontrak) ?? null
-						}
-						isOptionEqualToValue={(opt, val) => opt.value === val.value}
-						onChange={(_, v) => {
-							const value = v?.value ?? ""
-
-							setInputSisaKontrak(value)
-
-							// 🔥 langsung trigger filter (seperti jenis kontrak)
-							setFilterKontrak(inputKontrak)
-							setFilterNama(inputNama)
-							setFilterJenis(inputJenis)
-							setFilterCabang(inputCabang)
-							setFilterSisaKontrak(value)
-
-							setPage(1)
-						}}
-						getOptionLabel={(o) => o.title ?? ""}
-						fullWidth
-						sx={{
-							minWidth: { xs: '100%', sm: 220 },
-							"& .MuiOutlinedInput-root": { height: 36 },
-						}}
-						renderInput={(params) => (
-							<TextField {...params} size="small" placeholder="Sisa Kontrak" />
-						)}
-					/>
+					<LocalizationProvider dateAdapter={AdapterDayjs}>
+						<Stack direction="row" spacing={1} flexWrap="wrap">
+							<DatePicker
+								format="DD-MM-YYYY"
+								label="Tgl Berakhir Awal"
+								value={inputTglBerakhirAwal ? dayjs(inputTglBerakhirAwal) : null}
+								onChange={(newValue) => {
+									const val = newValue ? newValue.format('YYYY-MM-DD') : null
+									setInputTglBerakhirAwal(val)
+									if (applyDateFilters(val, inputTglBerakhirAkhir)) {
+										setFilterNama(inputNama)
+										setFilterCabang(inputCabang)
+										setPage(1)
+									}
+								}}
+								slotProps={{
+									textField: {
+										size: 'small',
+										sx: compactFieldSx,
+									},
+									actionBar: { actions: ['clear', 'today'] },
+								}}
+							/>
+							<DatePicker
+								format="DD-MM-YYYY"
+								label="Tgl Berakhir Akhir"
+								value={inputTglBerakhirAkhir ? dayjs(inputTglBerakhirAkhir) : null}
+								onChange={(newValue) => {
+									const val = newValue ? newValue.format('YYYY-MM-DD') : null
+									setInputTglBerakhirAkhir(val)
+									if (applyDateFilters(inputTglBerakhirAwal, val)) {
+										setFilterNama(inputNama)
+										setFilterCabang(inputCabang)
+										setPage(1)
+									}
+								}}
+								slotProps={{
+									textField: {
+										size: 'small',
+										sx: compactFieldSx,
+									},
+									actionBar: { actions: ['clear', 'today'] },
+								}}
+							/>
+						</Stack>
+					</LocalizationProvider>
 				</Stack>
 
-				{/* ================= RIGHT: BUTTON ================= */}
-				<Stack
-					direction="row"
-					spacing={1}
-					sx={{
-						width: { xs: '100%', sm: 'auto' },
-						justifyContent: { xs: 'stretch', sm: 'flex-end' },
-					}}
-				>
+				<Stack direction="row" spacing={1} flexShrink={0}>
+					<Badge
+						color="primary"
+						badgeContent={advancedFilterCount}
+						invisible={advancedFilterCount === 0}
+					>
+						<Button
+							variant="outlined"
+							startIcon={<IconFilter size={18} />}
+							onClick={() => setFilterModalOpen(true)}
+							sx={{ height: 36, whiteSpace: 'nowrap' }}
+						>
+							Filter
+						</Button>
+					</Badge>
 					<PrintDropdown onPrint={handlePrint} />
+				</Stack>
+			</Stack>
 
+			<Dialog
+				open={filterModalOpen}
+				onClose={() => setFilterModalOpen(false)}
+				fullWidth
+				maxWidth="sm"
+			>
+				<DialogTitle sx={{ fontWeight: 700 }}>Filter Lanjutan</DialogTitle>
+				<DialogContent dividers>
+					<Stack spacing={2} pt={0.5}>
+						<TextField
+							fullWidth
+							size="small"
+							label="No Kontrak"
+							placeholder="Cari no kontrak"
+							value={inputKontrak}
+							onChange={(e) => setInputKontrak(e.target.value)}
+						/>
+
+						<Autocomplete
+							options={jenisOptions}
+							getOptionLabel={(o) => o.title}
+							value={jenisOptions.find((c) => c.value === inputJenis) ?? null}
+							isOptionEqualToValue={(o, v) => o.value === v.value}
+							onChange={(_, v) => setInputJenis(v?.value ?? '')}
+							renderInput={(params) => (
+								<TextField {...params} size="small" label="Jenis Kontrak" />
+							)}
+						/>
+
+						<Autocomplete
+							options={sisaKontrakOptions}
+							getOptionLabel={(o) => o.title}
+							value={
+								sisaKontrakOptions.find((c) => c.value === inputSisaKontrak) ?? null
+							}
+							isOptionEqualToValue={(o, v) => o.value === v.value}
+							onChange={(_, v) => setInputSisaKontrak(v?.value ?? '')}
+							renderInput={(params) => (
+								<TextField {...params} size="small" label="Sisa Kontrak" />
+							)}
+						/>
+					</Stack>
+				</DialogContent>
+				<DialogActions sx={{ px: 3, py: 2, flexWrap: 'wrap', gap: 1 }}>
 					<Button
-						variant="outlined"
+						color="inherit"
 						onClick={() => {
 							setInputKontrak('')
-							setInputNama('')
 							setInputJenis('')
-							setInputCabang('')
 							setInputSisaKontrak('')
-
-							setFilterKontrak('')
-							setFilterNama('')
-							setFilterJenis('')
-							setFilterCabang('')
-							setFilterSisaKontrak('')
-
-							setPage(1)
-						}}
-						sx={{
-							height: 36,
-							px: 2,
-							whiteSpace: "nowrap",
 						}}
 					>
-						Reset
+						Reset Filter
 					</Button>
-				</Stack>
-
-			</Stack>
+					<Button
+						color="error"
+						variant="outlined"
+						onClick={() => {
+							resetAllFilters()
+							setFilterModalOpen(false)
+						}}
+					>
+						Reset Semua
+					</Button>
+					<Box sx={{ flex: 1 }} />
+					<Button onClick={() => setFilterModalOpen(false)}>Batal</Button>
+					<Button
+						variant="contained"
+						onClick={() => {
+							if (applyAllFilters()) {
+								setFilterModalOpen(false)
+							}
+						}}
+					>
+						Terapkan
+					</Button>
+				</DialogActions>
+			</Dialog>
 
       {/* ================= TABLE ================= */}
 			<TableContainer

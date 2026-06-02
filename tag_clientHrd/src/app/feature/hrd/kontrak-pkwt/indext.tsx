@@ -24,11 +24,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Badge,
 } from '@mui/material'
-import { IconEdit, IconSearch, IconTrash } from '@tabler/icons-react'
+import { IconCircleCheck, IconEdit, IconFilter, IconSearch, IconTrash } from '@tabler/icons-react'
 import useSWR from 'swr'
 import { useComboCabangWith, useComboVendorByNama } from '@/hooks/useComboGroup'
-import { deleteKontrakPkwt, fetchKontrakPkwt, saveKontrakPkwt } from '@/services/hrd/kontrak-pkwt.service'
+import { approveKontrakPkwt, deleteKontrakPkwt, fetchKontrakPkwt, saveKontrakPkwt } from '@/services/hrd/kontrak-pkwt.service'
 import { formatDate } from '@/utils/format'
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -54,6 +55,7 @@ const KontrakPkwtListComponent = () => {
   const [inputNama, setInputNama] = useState('')
   const [inputCabang, setInputCabang] = useState('')
   const [inputPerusahaan, setInputPerusahaan] = useState('')
+  const [inputStatusTtd, setInputStatusTtd] = useState('')
   const [inputTglAwal, setInputTglAwal] = useState<string | null>(today);
   const [inputTglAkhir, setInputTglAkhir] = useState<string | null>(today);
 
@@ -61,8 +63,10 @@ const KontrakPkwtListComponent = () => {
   const [filterNama, setFilterNama] = useState('')
   const [filterCabang, setFilterCabang] = useState('')
   const [filterPerusahaan, setFilterPerusahaan] = useState('')
+  const [filterStatusTtd, setFilterStatusTtd] = useState('')
   const [filterTglAwal, setFilterTglAwal] = useState<string | null>(today);
   const [filterTglAkhir, setFilterTglAkhir] = useState<string | null>(today);
+  const [filterModalOpen, setFilterModalOpen] = useState(false)
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -73,19 +77,37 @@ const KontrakPkwtListComponent = () => {
   const [selectedDelete, setSelectedDelete] = useState<any>(null);
   const [loadingDelete, setLoadingDelete] = useState(false);
 
+  const [openApproveDialog, setOpenApproveDialog] = useState(false);
+  const [selectedApprove, setSelectedApprove] = useState<any>(null);
+  const [loadingApprove, setLoadingApprove] = useState(false);
+
+  const parseStatusTtdFilter = (value: string): number | null => {
+    if (value === '' || value === undefined) return null
+    const n = Number(value)
+    return Number.isNaN(n) ? null : n
+  }
+
   const { data, isLoading, mutate } = useSWR(
-    ['pkwt', filterNama, filterCabang, filterPerusahaan, filterTglAwal, filterTglAkhir, page, pageSize],
+    ['pkwt', filterNama, filterCabang, filterPerusahaan, filterStatusTtd, filterTglAwal, filterTglAkhir, page, pageSize],
     () =>
       fetchKontrakPkwt({
         namaKaryawan: filterNama,
         cabang: filterCabang,
         perusahaan: filterPerusahaan,
+        statusTtd: parseStatusTtdFilter(filterStatusTtd),
         tglAwal: filterTglAwal ?? '',
         tglAkhir: filterTglAkhir ?? '',
         page,
         pageSize,
       })
   )
+
+  const ttdStatusOptions = [
+    { title: 'Semua', value: '' },
+    { title: 'Draft', value: '0' },
+    { title: 'TTD', value: '1' },
+    { title: 'Approved', value: '2' },
+  ]
 
   const list = data?.Data ?? []
   const total = data?.TotalCount ?? 0
@@ -102,6 +124,31 @@ const KontrakPkwtListComponent = () => {
       setFilterCabang(cab)
     }
   }, [])
+
+  const getTtdStatusLabel = (status?: number | null) => {
+    if (status === 2) return { label: 'Approved', color: 'success' as const }
+    if (status === 1) return { label: 'TTD', color: 'info' as const }
+    // Draft: ttd = 0 atau NULL
+    return { label: 'Draft', color: 'default' as const }
+  }
+
+  // ================= APPROVE =================
+  const handleConfirmApprove = async () => {
+    if (!selectedApprove?.NOKONTRAK) return
+
+    try {
+      setLoadingApprove(true)
+      await approveKontrakPkwt(selectedApprove.NOKONTRAK)
+      await mutate()
+      showSnackbar('Kontrak berhasil di-approve', 'success')
+      setOpenApproveDialog(false)
+      setSelectedApprove(null)
+    } catch (err: any) {
+      showSnackbar(err.message || 'Gagal approve kontrak', 'error')
+    } finally {
+      setLoadingApprove(false)
+    }
+  }
 
   // ================= HAPUS =================
   const handleConfirmDelete = async () => {
@@ -129,14 +176,41 @@ const KontrakPkwtListComponent = () => {
     }
   };
 
-  // ================= ACTION =================
-  const handleSearch = () => {
+  const applyAllFilters = () => {
     setFilterNama(inputNama)
     setFilterCabang(inputCabang)
     setFilterPerusahaan(inputPerusahaan)
+    setFilterStatusTtd(inputStatusTtd)
     setFilterTglAwal(inputTglAwal)
     setFilterTglAkhir(inputTglAkhir)
     setPage(1)
+    return true
+  }
+
+  const resetAllFilters = () => {
+    const cab = userCabang ?? ''
+
+    setInputNama('')
+    setInputCabang(cab)
+    setInputPerusahaan('')
+    setInputStatusTtd('')
+    setInputTglAwal(today)
+    setInputTglAkhir(today)
+
+    setFilterNama('')
+    setFilterCabang(cab)
+    setFilterPerusahaan('')
+    setFilterStatusTtd('')
+    setFilterTglAwal(today)
+    setFilterTglAkhir(today)
+    setPage(1)
+  }
+
+  const advancedFilterCount = [filterPerusahaan, filterStatusTtd].filter(Boolean).length
+
+  // ================= ACTION =================
+  const handleSearch = () => {
+    applyAllFilters()
   }
 
   const headerStyle = (theme: any) => ({
@@ -216,29 +290,6 @@ const KontrakPkwtListComponent = () => {
             }}
           />
 
-          {/* ================= PERUSAHAAN ================= */}
-          <Autocomplete
-            options={vendorOptions ?? []}
-            getOptionLabel={(o) => o.title ?? ''}
-            value={
-              vendorOptions?.find((c) => c.value === inputPerusahaan) ?? null
-            }
-            onChange={(_, v) => {
-              const val = v?.value ?? ''
-              setInputPerusahaan(val)
-              setFilterPerusahaan(val)
-              setPage(1)
-            }}
-            fullWidth
-            sx={{
-              minWidth: { xs: '100%', sm: 220 },
-              "& .MuiOutlinedInput-root": { height: 36 },
-            }}
-            renderInput={(params) => (
-              <TextField {...params} size="small" placeholder="Perusahaan" />
-            )}
-          />
-		
 		      {/* ================= CABANG ================= */}
           {!userCabang && (
             <Autocomplete
@@ -397,6 +448,21 @@ const KontrakPkwtListComponent = () => {
             justifyContent: { xs: 'stretch', sm: 'flex-end' },
           }}
         >
+          <Badge
+            color="primary"
+            badgeContent={advancedFilterCount}
+            invisible={advancedFilterCount === 0}
+          >
+            <Button
+              variant="outlined"
+              startIcon={<IconFilter size={18} />}
+              onClick={() => setFilterModalOpen(true)}
+              sx={{ height: 36, whiteSpace: 'nowrap' }}
+            >
+              Filter
+            </Button>
+          </Badge>
+
           <AccessButton
             access={{ subject: "KontrakPkwt", action: "SaveEditKontrakPkwt" }}
             color="primary"
@@ -409,6 +475,74 @@ const KontrakPkwtListComponent = () => {
         </Stack>
 
       </Stack>
+
+      <Dialog
+        open={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Filter Lanjutan</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} pt={0.5}>
+            <Autocomplete
+              options={vendorOptions ?? []}
+              getOptionLabel={(o) => o.title ?? ''}
+              value={
+                vendorOptions?.find((c) => c.value === inputPerusahaan) ?? null
+              }
+              isOptionEqualToValue={(o, v) => o.value === v.value}
+              onChange={(_, v) => setInputPerusahaan(v?.value ?? '')}
+              renderInput={(params) => (
+                <TextField {...params} size="small" label="Perusahaan" placeholder="Pilih perusahaan" />
+              )}
+            />
+
+            <Autocomplete
+              options={ttdStatusOptions}
+              getOptionLabel={(o) => o.title}
+              value={ttdStatusOptions.find((c) => c.value === inputStatusTtd) ?? ttdStatusOptions[0]}
+              isOptionEqualToValue={(o, v) => o.value === v.value}
+              onChange={(_, v) => setInputStatusTtd(v?.value ?? '')}
+              renderInput={(params) => (
+                <TextField {...params} size="small" label="Status TTD" />
+              )}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, flexWrap: 'wrap', gap: 1 }}>
+          <Button
+            color="inherit"
+            onClick={() => {
+              setInputPerusahaan('')
+              setInputStatusTtd('')
+            }}
+          >
+            Reset Filter
+          </Button>
+          <Button
+            color="error"
+            variant="outlined"
+            onClick={() => {
+              resetAllFilters()
+              setFilterModalOpen(false)
+            }}
+          >
+            Reset Semua
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          <Button onClick={() => setFilterModalOpen(false)}>Batal</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              applyAllFilters()
+              setFilterModalOpen(false)
+            }}
+          >
+            Terapkan
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ================= TABLE ================= */}
       <TableContainer component={Paper} sx={{ maxHeight: "70vh", borderRadius: 2 }}>
@@ -645,9 +779,29 @@ const KontrakPkwtListComponent = () => {
                           }
                           size="small"
                         />
+                        <Chip
+                          label={getTtdStatusLabel(item.Status).label}
+                          color={getTtdStatusLabel(item.Status).color}
+                          size="small"
+                          variant="outlined"
+                        />
 
                         {/* ================= ACTION ================= */}
                         <Box display="flex" gap={0.5}>
+                          {item.Status === 1 && (
+                            <AccessButton
+                              access={{ subject: "KontrakPkwt", action: "ApproveKontrakPkwt" }}
+                              color="primary"
+                              type="icon"
+                              onClick={() => {
+                                setSelectedApprove(item)
+                                setOpenApproveDialog(true)
+                              }}
+                            >
+                              <IconCircleCheck width={18} />
+                            </AccessButton>
+                          )}
+
                           <AccessButton
                             access={{ subject: "KontrakPkwt", action: "GetDetailKontrakPkwt" }}
                             color="success"
@@ -778,6 +932,27 @@ const KontrakPkwtListComponent = () => {
           }}
         />
       )}
+
+      <Dialog open={openApproveDialog} onClose={() => !loadingApprove && setOpenApproveDialog(false)}>
+        <DialogTitle>Konfirmasi Approve</DialogTitle>
+        <DialogContent>
+          Approve kontrak <strong>{selectedApprove?.NOKONTRAK}</strong> untuk{' '}
+          <strong>{selectedApprove?.NMKARYAWAN}</strong>? Status TTD akan diubah menjadi Approved.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenApproveDialog(false)} disabled={loadingApprove}>
+            Batal
+          </Button>
+          <Button
+            color="primary"
+            variant="contained"
+            onClick={handleConfirmApprove}
+            disabled={loadingApprove}
+          >
+            {loadingApprove ? 'Memproses...' : 'Approve'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
         <DialogTitle>Konfirmasi Hapus</DialogTitle>

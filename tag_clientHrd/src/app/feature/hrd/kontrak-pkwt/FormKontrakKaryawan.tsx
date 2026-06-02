@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -20,15 +20,16 @@ import {
   Autocomplete,
   InputAdornment,
   Tooltip,
+  useMediaQuery,
 } from '@mui/material'
 import DialogHeader from '@/app/components/DialogHeader/DialogHeader'
-import { IconDeviceFloppy, IconPrinter } from '@tabler/icons-react'
+import { IconCircleCheck, IconDeviceFloppy, IconPrinter } from '@tabler/icons-react'
 import SectionTitle from '@/app/components/SectionTitle/SectionTitle'
 import { getDetailMasterKtp, getFilterMasterKtp, useComboBagian, useComboCabangWith, useComboDivisi, useComboJabatan, useComboJenisGaji, useComboJenisKontrak, useComboKategoriGaji, useComboPeriodeBulan, useComboStatusPajak, useComboSubBagian, useComboVendorByNama } from '@/hooks/useComboGroup'
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs'
-import { fetchDetailKontrakPkwt, printKontrakPkwt } from '@/services/hrd/kontrak-pkwt.service'
+import { approveKontrakPkwt, fetchDetailKontrakPkwt, printKontrakPkwt } from '@/services/hrd/kontrak-pkwt.service'
 import { checkFaktaIntegritasExists } from '@/services/master-data/master-ktp.service'
 import AccessButton from '@/app/components/buttons/AccessButton'
 import { useSnackbar } from '@/app/context/SnackbarContext'
@@ -84,6 +85,7 @@ interface KontrakKaryawanDto {
   NOEVALUASI?: string
   HASIL?: string
   KEPUTUSAN?: string
+  Status?: number
 }
 
 interface Props {
@@ -101,7 +103,21 @@ const FormKontrakKaryawan: React.FC<Props> = ({
   onSubmit,
 }) => {
   const { showSnackbar } = useSnackbar();
-  
+  /** ≥1100px: baris 3–4 kolom (periode, evaluasi); di bawahnya field full-width agar terbaca di tablet */
+  const isWideForm = useMediaQuery('(min-width:1100px)');
+  const formGrid = useMemo(
+    () => ({
+      main: { xs: 12, sm: 6 } as const,
+      half: { xs: 12, sm: 6 } as const,
+      third: isWideForm ? ({ xs: 12, sm: 4 } as const) : ({ xs: 12 } as const),
+      twoThird: isWideForm ? ({ xs: 12, sm: 8 } as const) : ({ xs: 12 } as const),
+      period: isWideForm ? ({ xs: 12, sm: 3 } as const) : ({ xs: 12 } as const),
+      periodAwal: isWideForm ? ({ xs: 12, sm: 5 } as const) : ({ xs: 12 } as const),
+      periodAkhir: isWideForm ? ({ xs: 12, sm: 4 } as const) : ({ xs: 12 } as const),
+    }),
+    [isWideForm],
+  );
+
   const { cabang: cabangOptions, loading : cabangLoading } = useComboCabangWith()
   const [values, setValues] = useState<KontrakKaryawanDto>({})
   const [loading, setLoading] = useState(false)
@@ -141,6 +157,8 @@ const FormKontrakKaryawan: React.FC<Props> = ({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [openApproveDialog, setOpenApproveDialog] = useState(false);
+  const [loadingApprove, setLoadingApprove] = useState(false);
 
   
   useEffect(() => {
@@ -172,6 +190,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
           NOEVALUASI: res.NOEVALUASI ?? "",
           HASIL: res.HASIL ?? "",
           KEPUTUSAN: res.KEPUTUSAN ?? "",
+          Status: res.Status ?? res.status ?? 0,
         }
 
         setValues({ ...data }) // 🔥 force render
@@ -275,7 +294,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
         TGLLAHIR: res.TGLLAHIR?.substring(0, 10) || "",
         TGLMASUK: res.TGLMASUK?.substring(0, 10) || "",
         TGLINPUT: res.TGLINPUT?.substring(0, 10) || dayjs().format("YYYY-MM-DD"),
-        PAWAL: res.PAWAL?.substring(0, 10) || "",
+        PAWAL: res.PAKHIR?.substring(0, 10) || "",
         PAKHIR: res.PAKHIR?.substring(0, 10) || "",
 
         // null safe
@@ -383,6 +402,22 @@ const FormKontrakKaryawan: React.FC<Props> = ({
   /* =======================
  * Print Kontrak (PDF Only)
  * ======================= */
+  const handleConfirmApprove = async () => {
+    if (!values.NOKONTRAK) return;
+
+    try {
+      setLoadingApprove(true);
+      await approveKontrakPkwt(values.NOKONTRAK);
+      setValues((prev) => ({ ...prev, Status: 2 }));
+      showSnackbar('Kontrak berhasil di-approve', 'success');
+      setOpenApproveDialog(false);
+    } catch (err: any) {
+      showSnackbar(err.message || 'Gagal approve kontrak', 'error');
+    } finally {
+      setLoadingApprove(false);
+    }
+  };
+
   const handlePrintKontrak = async (noKontrak: string) => {
     try {
       if (!noKontrak) {
@@ -421,7 +456,16 @@ const FormKontrakKaryawan: React.FC<Props> = ({
     <Dialog
       open
       fullWidth
-      maxWidth="lg"
+      maxWidth={false}
+      scroll="paper"
+      PaperProps={{
+        sx: {
+          maxWidth: { xs: '100%', sm: 1320 },
+          width: { xs: 'calc(100% - 16px)', sm: '100%' },
+          m: { xs: 1, sm: 2 },
+          maxHeight: { xs: 'calc(100dvh - 16px)', sm: 'calc(100dvh - 48px)' },
+        },
+      }}
       onClose={(event, reason) => {
         if (reason === "backdropClick" || reason === "escapeKeyDown") return;
         onClose();
@@ -466,12 +510,18 @@ const FormKontrakKaryawan: React.FC<Props> = ({
       )}
 
       <form onSubmit={handleSubmit}>
-        <DialogContent sx={{ position: "relative" }}>
+        <DialogContent
+          sx={{
+            position: "relative",
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2, sm: 3 },
+          }}
+        >
 
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
             
             {/* ================= LEFT ================= */}
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={formGrid.main}>
 
               {/* ================= DATA KARYAWAN ================= */}
               <SectionTitle
@@ -1081,7 +1131,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
             </Grid>
 
             {/* ================= RIGHT ================= */}
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={formGrid.main}>
 
               {/* ================= DATA KONTRAK ================= */}
               <SectionTitle
@@ -1126,7 +1176,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
                   </Typography>
 
                   <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 4 }}>
+                    <Grid size={formGrid.third}>
                       <TextField
                         fullWidth
                         size="small"
@@ -1138,7 +1188,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
                       />
                     </Grid>
 
-                    <Grid size={{ xs: 12, sm: 4 }}>
+                    <Grid size={formGrid.third}>
                       <TextField
                         fullWidth
                         size="small"
@@ -1150,7 +1200,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
                       />
                     </Grid>
 
-                    <Grid size={{ xs: 12, sm: 4 }}>
+                    <Grid size={formGrid.third}>
                       <TextField
                         fullWidth
                         size="small"
@@ -1168,7 +1218,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
               <Stack spacing={1.5}>
 
                 <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, sm: 4 }}>
+                  <Grid size={formGrid.third}>
                     <LocalizationProvider dateAdapter={AdapterDayjs}>
                       <DatePicker
                         label={
@@ -1218,7 +1268,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
                     </LocalizationProvider>
                   </Grid>
 
-                  <Grid size={{ xs: 12, sm: 8 }}>
+                  <Grid size={formGrid.twoThird}>
                     <TextField
                       fullWidth size="small"
                       label="No Kontrak"
@@ -1451,7 +1501,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
                   <Grid container spacing={2}>
 
                     {/* ================= PERIODE ================= */}
-                    <Grid size={{ xs: 12, sm: 4 }}>
+                    <Grid size={formGrid.period}>
                       <Autocomplete
                         options={periodeOptions ?? []}
                         loading={loadingPeriode}
@@ -1510,7 +1560,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
                     </Grid>
 
                     {/* ================= PAWAL ================= */}
-                    <Grid size={{ xs: 12, sm: 4 }}>
+                    <Grid size={formGrid.periodAwal}>
                       <DatePicker
                         label={
                           <span>
@@ -1596,7 +1646,7 @@ const FormKontrakKaryawan: React.FC<Props> = ({
                     </Grid>
 
                     {/* ================= PAKHIR ================= */}
-                    <Grid size={{ xs: 12, sm: 4 }}>
+                    <Grid size={formGrid.periodAkhir}>
                       <DatePicker
                         label={
                           <span>
@@ -1994,15 +2044,17 @@ const FormKontrakKaryawan: React.FC<Props> = ({
             position: "sticky",
             bottom: 0,
             zIndex: 10,
-            px: 3,
+            px: { xs: 2, sm: 3 },
             py: 2,
             boxShadow: "0 -2px 8px rgba(0,0,0,0.06)",
-            borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-            backgroundColor: (theme) => theme.palette.background.paper,
+            borderTop: (t) => `1px solid ${t.palette.divider}`,
+            backgroundColor: (t) => t.palette.background.paper,
 
             display: "flex",
-            justifyContent: "space-between", // 🔥 kiri & kanan
-            alignItems: "center",
+            flexDirection: { xs: "column", md: "row" },
+            justifyContent: "space-between",
+            alignItems: { xs: "stretch", md: "center" },
+            gap: { xs: 1.5, md: 0 },
           }}
         >
           {/* 🔥 KIRI: CATATAN */}
@@ -2026,10 +2078,32 @@ const FormKontrakKaryawan: React.FC<Props> = ({
           </Typography>
 
           {/* 🔥 KANAN: BUTTON */}
-          <Box display="flex" gap={1}>
+          <Box display="flex" gap={1} flexWrap="wrap" justifyContent={{ xs: "flex-end", md: "flex-start" }}>
             <Button variant="outlined" onClick={onClose}>
               Batal
             </Button>
+
+            {isEdit && values.NOKONTRAK && values.Status === 1 && (
+              <Tooltip title="Approve kontrak (status TTD → Approved)">
+                <span>
+                  <AccessButton
+                    access={{ subject: "KontrakPkwt", action: "ApproveKontrakPkwt" }}
+                    variant="contained"
+                    color="success"
+                    onClick={() => !loadingApprove && setOpenApproveDialog(true)}
+                    startIcon={
+                      loadingApprove ? (
+                        <CircularProgress size={18} color="inherit" />
+                      ) : (
+                        <IconCircleCheck size={16} />
+                      )
+                    }
+                  >
+                    {loadingApprove ? 'Memproses...' : 'Approve'}
+                  </AccessButton>
+                </span>
+              </Tooltip>
+            )}
 
             {/* PRINT */}
             <Tooltip title={!values?.NOKONTRAK ? "Kontrak belum dibuat" : "Print Kontrak"}>
@@ -2079,6 +2153,35 @@ const FormKontrakKaryawan: React.FC<Props> = ({
           </Box>
         </DialogActions>
         
+        <Dialog
+          open={openApproveDialog}
+          onClose={() => !loadingApprove && setOpenApproveDialog(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>Konfirmasi Approve</DialogTitle>
+          <DialogContent>
+            Approve kontrak <strong>{values.NOKONTRAK}</strong> untuk{' '}
+            <strong>{values.NMKARYAWAN}</strong>? Status TTD akan diubah menjadi Approved.
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenApproveDialog(false)}
+              disabled={loadingApprove}
+            >
+              Batal
+            </Button>
+            <Button
+              color="success"
+              variant="contained"
+              onClick={handleConfirmApprove}
+              disabled={loadingApprove}
+            >
+              {loadingApprove ? 'Memproses...' : 'Approve'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         <PdfPreviewDialog
           open={previewOpen}
           loading={previewLoading}

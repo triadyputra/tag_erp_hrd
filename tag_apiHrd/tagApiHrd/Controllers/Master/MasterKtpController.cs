@@ -135,6 +135,31 @@ namespace tagApiHrd.Controllers.Master
         }
 
         // ===============================
+        // UPDATE NOMOR KTP
+        // ===============================
+        [HttpPut("update-nomor")]
+        public async Task<IActionResult> UpdateNomorKtp(
+            [FromBody] UpdateNomorKtpDto dto)
+        {
+            try
+            {
+                var result =
+                    await _repo.UpdateNomorKtp(dto);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(
+                    ApiResponse<object>.Error(
+                        ex.Message,
+                        "500"
+                    )
+                );
+            }
+        }
+
+        // ===============================
         // FAKTA INTEGRITAS (FILE)
         // ===============================
         [HttpGet("{noktp}/fakta-integritas/exists")]

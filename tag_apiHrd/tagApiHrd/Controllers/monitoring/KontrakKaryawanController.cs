@@ -29,6 +29,15 @@ namespace tagApiHrd.Controllers.monitoring
             _comboRepository = comboRepository;
         }
 
+        private static bool IsTglBerakhirRangeInvalid(
+            DateTime? tglBerakhirAwal,
+            DateTime? tglBerakhirAkhir)
+        {
+            return tglBerakhirAwal.HasValue
+                && tglBerakhirAkhir.HasValue
+                && tglBerakhirAwal.Value.Date > tglBerakhirAkhir.Value.Date;
+        }
+
         [ApiKeyAuthorize]
         [HttpGet("GetListKontrakKaryawan")]
         public async Task<ActionResult<PaginatedResponse<ViewKontrakAktif>>> GetListKontrakKaryawan(
@@ -37,11 +46,20 @@ namespace tagApiHrd.Controllers.monitoring
             string? jenisKontrak,
             string? cabang,
             string? sisaKontrak,
+            DateTime? tglBerakhirAwal,
+            DateTime? tglBerakhirAkhir,
             int page = 1,
             int pageSize = 10)
         {
             try
             {
+                if (IsTglBerakhirRangeInvalid(tglBerakhirAwal, tglBerakhirAkhir))
+                {
+                    return BadRequest(ApiResponse<object>.Error(
+                        "Tanggal berakhir awal tidak boleh lebih besar dari tanggal berakhir akhir",
+                        "400"));
+                }
+
                 var finalCabang = await _comboRepository.GetCabangAsync(cabang);
                 // =========================
                 // VALIDASI
@@ -55,6 +73,8 @@ namespace tagApiHrd.Controllers.monitoring
                     jenisKontrak,
                     finalCabang,
                     sisaKontrak,
+                    tglBerakhirAwal,
+                    tglBerakhirAkhir,
                     page,
                     pageSize
                 );
@@ -90,20 +110,28 @@ namespace tagApiHrd.Controllers.monitoring
             [FromQuery] string? jenisKontrak,
             [FromQuery] string? cabang,
             [FromQuery] string? sisaKontrak,
+            [FromQuery] DateTime? tglBerakhirAwal,
+            [FromQuery] DateTime? tglBerakhirAkhir,
             [FromQuery] string? format = "pdf"
         )
         {
             try
             {
-                // ===============================
-                // AMBIL DATA
-                // ===============================
+                if (IsTglBerakhirRangeInvalid(tglBerakhirAwal, tglBerakhirAkhir))
+                {
+                    return BadRequest(ApiResponse<object>.Error(
+                        "Tanggal berakhir awal tidak boleh lebih besar dari tanggal berakhir akhir",
+                        "400"));
+                }
+
                 var data = await _repo.PrintDataKaryawan(
                     noKontrak,
                     namaKaryawan,
                     jenisKontrak,
                     cabang,
-                    sisaKontrak
+                    sisaKontrak,
+                    tglBerakhirAwal,
+                    tglBerakhirAkhir
                 );
 
                 if (data == null || !data.Any())

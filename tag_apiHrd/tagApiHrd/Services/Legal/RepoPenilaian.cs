@@ -284,6 +284,7 @@ namespace tagApiHrd.Services.Legal
             string? kdCabang,
             DateTime? tglAwal,
             DateTime? tglAkhir,
+            string? keputusan,
             int page,
             int pageSize)
         {
@@ -300,6 +301,7 @@ namespace tagApiHrd.Services.Legal
                 param.Add("@kdcabang", string.IsNullOrWhiteSpace(kdCabang) ? null : kdCabang);
                 param.Add("@tglAwal", tglAwal);
                 param.Add("@tglAkhir", tglAkhir);
+                param.Add("@keputusan", string.IsNullOrWhiteSpace(keputusan) ? null : keputusan);
                 param.Add("@page", page);
                 param.Add("@pageSize", pageSize);
 

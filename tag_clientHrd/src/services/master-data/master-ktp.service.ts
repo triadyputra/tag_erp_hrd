@@ -56,6 +56,40 @@ export async function fetchDetailMasterKtp(noktp: string) {
   return json?.data ?? json
 }
 
+export interface UpdateNomorKtpPayload {
+  noktpLama: string
+  noktpBaru: string
+}
+
+export async function updateNomorMasterKtp(payload: UpdateNomorKtpPayload) {
+  if (!payload.noktpLama?.trim() || !payload.noktpBaru?.trim()) {
+    throw new Error('Nomor KTP lama dan baru wajib diisi')
+  }
+
+  const res = await authFetch(`${BASE_URL}/update-nomor`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      noktpLama: payload.noktpLama.trim(),
+      noktpBaru: payload.noktpBaru.trim(),
+    }),
+  })
+
+  const json = await res.json()
+
+  if (!res.ok || json?.Metadata?.Success === false) {
+    throw new Error(
+      json?.Metadata?.Message ||
+        json?.message ||
+        'Gagal memperbarui nomor KTP'
+    )
+  }
+
+  return json?.data ?? json
+}
+
 export async function saveMasterKtp(payload: any) {
   const res = await authFetch(`${BASE_URL}`, {
     method: 'POST',

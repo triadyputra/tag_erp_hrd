@@ -15,6 +15,8 @@ namespace tagApi.Services.Hrd
             string? jenisKontrak,
             string? cabang,
             string? sisaKontrak,
+            DateTime? tglBerakhirAwal,
+            DateTime? tglBerakhirAkhir,
             int page,
             int pageSize
         );
@@ -26,12 +28,23 @@ namespace tagApi.Services.Hrd
 
         Task<KaryawanDetailResult> GetDetailKaryawan(string noktp);
 
+        Task<PagedResult<KaryawanTetapListDto>> ListKaryawanTetap(
+            string? noKtp,
+            string? namaLengkap,
+            string? kdCabang,
+            int page,
+            int pageSize
+        );
+
+        Task<KaryawanTetapListDto?> GetDetailKaryawanTetap(string noktp);
+
         Task<PagedResult<KontrakKaryawanDto>> GetListKontrakKaryawan(
             DateTime? tglAwal,
             DateTime? tglAkhir,
             string? kdCabang,
             string? namaKaryawan,
             string? perusahaan,
+            int? statusTtd,
             int page,
             int pageSize
         );
@@ -45,14 +58,16 @@ namespace tagApi.Services.Hrd
 
         Task<bool> DeleteKontrakAsync(string noKontrak, string noKtp, string user);
 
-        Task<int> UpdateStatusTtd(string noKontrak);
+        Task<int> UpdateStatusTtd(string noKontrak, int status = 1);
 
         Task<List<ReportDataKontrakAktifDto>> GetReportDataKontrakAktifAll(
         string? ckdcabang,
         string? cnokontrak,
         string? cnmkaryawan,
         string? cjnskontrak,
-        string? sisaKontrakFilter
+        string? sisaKontrakFilter,
+        DateTime? tglBerakhirAwal,
+        DateTime? tglBerakhirAkhir
         );
 
         Task<List<ReportDataKontrakAktifDto>> PrintDataKaryawan(
@@ -60,7 +75,9 @@ namespace tagApi.Services.Hrd
         string? namaKaryawan,
         string? jenisKontrak,
         string? cabang,
-        string? sisaKontrak);
+        string? sisaKontrak,
+        DateTime? tglBerakhirAwal,
+        DateTime? tglBerakhirAkhir);
 
         #region cuti
         Task<PagedResult<ViewSaldoCutiKaryawan>> GetSaldoCutiKaryawan(

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Claims;
@@ -24,19 +25,22 @@ namespace tagApi.Controllers.Hrd
         private readonly IRepoCombo _comboRepository;
         private readonly IFaktaIntegritasFileService _faktaIntegritasFiles;
         private readonly string _ttdPath;
+        private readonly string _wwwrootPath;
 
         public KontrakPkwtController(
             IRepoHrd repo,
             UserManager<ApplicationUser> userManager,
             IConfiguration configuration,
             IRepoCombo comboRepository,
-            IFaktaIntegritasFileService faktaIntegritasFiles)
+            IFaktaIntegritasFileService faktaIntegritasFiles,
+            IWebHostEnvironment webHostEnvironment)
         {
             _repo = repo;
             this.userManager = userManager;
             _comboRepository = comboRepository;
             _faktaIntegritasFiles = faktaIntegritasFiles;
             _ttdPath = configuration["FileStorage:TtdPath"] ?? "D:/TAG/Storage/";
+            _wwwrootPath = webHostEnvironment.WebRootPath;
         }
 
         // =========================
@@ -50,6 +54,7 @@ namespace tagApi.Controllers.Hrd
             string? cabang,
             string? namaKaryawan,
             string? perusahaan,
+            int? statusTtd,
             int page = 1,
             int pageSize = 10)
         {
@@ -69,6 +74,7 @@ namespace tagApi.Controllers.Hrd
                     finalCabang,
                     namaKaryawan,
                     perusahaan,
+                    statusTtd,
                     page,
                     pageSize
                 );
@@ -285,6 +291,49 @@ namespace tagApi.Controllers.Hrd
         }
 
         [ApiKeyAuthorize]
+        [HttpPost("ApproveKontrakPkwt")]
+        public async Task<ActionResult<ApiResponse<object>>> ApproveKontrakPkwt([FromBody] string noKontrak)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(noKontrak))
+                {
+                    return BadRequest(ApiResponse<object>.Error("No kontrak wajib diisi", "400"));
+                }
+
+                var detail = await _repo.GetDetailKontrak(noKontrak);
+                if (detail == null)
+                {
+                    return BadRequest(ApiResponse<object>.Error("Data kontrak tidak ditemukan", "404"));
+                }
+
+                if (detail.Status == 2)
+                {
+                    return Ok(ApiResponse<object>.SuccessNoData("Kontrak sudah di-approve", "200"));
+                }
+
+                if (detail.Status != 1)
+                {
+                    return BadRequest(ApiResponse<object>.Error(
+                        "Approve hanya dapat dilakukan jika status kontrak sudah TTD (1)",
+                        "400"));
+                }
+
+                var affected = await _repo.UpdateStatusTtd(noKontrak, 2);
+                if (affected == 0)
+                {
+                    return BadRequest(ApiResponse<object>.Error("Gagal approve kontrak", "500"));
+                }
+
+                return Ok(ApiResponse<object>.SuccessNoData("Kontrak berhasil di-approve", "200"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.Error(ex.Message, "500"));
+            }
+        }
+
+        [ApiKeyAuthorize]
         [HttpPost("PrintKontrak")]
         public async Task<IActionResult> PrintKontrak([FromBody] string noKontrak)
         {
@@ -328,25 +377,34 @@ namespace tagApi.Controllers.Hrd
                     Alamat = dataDb.ALAMAT,
                     Telepon = dataDb.NOHANDPHONE,
                     Jabatan = dataDb.NMJABATAN,
+                    NmBagian = dataDb.NMBAGIAN,
                     TglMulai = dataDb.PAWAL,
                     TglSelesai = dataDb.PAKHIR,
                     JenisKelamin = dataDb.KELAMIN,
                     Agama = dataDb.AGAMA,
                     Status = dataDb.PERKAWINAN,
-
                     TempatLahir = dataDb.TEMPATLAHIR,
                     TanggalLahir = dataDb.TGLLAHIR,
-
-                    // 🔥 PASAL (AMBIL DARI DB / STATIC)
                     Pasal1 = GetPasal1(dataDb),
                     Pasal2 = GetPasal2(dataDb),
-                    Pasal3 = GetPasal3(dataDb)
+                    Pasal3 = GetPasal3(dataDb),
+                    NmPerusahaan = dataDb.NMPERUSAHAAN,
+                    StatusTtd = dataDb.Status
                 };
 
-                // 🔥 cari file berdasarkan NOKONTRAK
-                // ===============================
-                // AMBIL TTD DARI FILE STORAGE
-                // ===============================
+                reportData.LOGO_BASE64 = await KontrakPkwtLogoHelper.LoadLogoBase64Async(
+                    _wwwrootPath, dataDb.NMPERUSAHAAN);
+
+                if (dataDb.Status == 2)
+                {
+                    var ttdHrdPath = Path.Combine(_wwwrootPath, "ttd_hrd.png");
+                    if (System.IO.File.Exists(ttdHrdPath))
+                    {
+                        var hrdBytes = await System.IO.File.ReadAllBytesAsync(ttdHrdPath);
+                        reportData.HRD_SIGNATURE_BASE64 = Convert.ToBase64String(hrdBytes);
+                    }
+                }
+
                 var cleanNoKontrak = dataDb.NOKONTRAK
                     .Replace("/", "")
                     .Trim();
@@ -355,28 +413,21 @@ namespace tagApi.Controllers.Hrd
 
                 try
                 {
-                    // 🔥 cari file apapun extensionnya
                     var file = Directory
                         .GetFiles(_ttdPath, $"{cleanNoKontrak}.*", SearchOption.TopDirectoryOnly)
                         .FirstOrDefault();
 
                     if (file != null)
-                    {
                         foundPath = file;
-                    }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"ERROR READ DIRECTORY: {ex.Message}");
                 }
 
-                // ===============================
-                // CONVERT KE BASE64
-                // ===============================
                 if (!string.IsNullOrEmpty(foundPath))
                 {
                     var bytes = await System.IO.File.ReadAllBytesAsync(foundPath);
-
                     var ext = Path.GetExtension(foundPath).ToLower();
                     var mime = ext switch
                     {
@@ -384,14 +435,11 @@ namespace tagApi.Controllers.Hrd
                         ".png" => "image/png",
                         _ => "application/octet-stream"
                     };
-
                     reportData.SIGNATURE_BASE64 = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
                 }
                 else
                 {
-                    // 🔥 fallback default (optional)
                     var defaultPath = Path.Combine(_ttdPath, "default.png");
-
                     if (System.IO.File.Exists(defaultPath))
                     {
                         var bytes = await System.IO.File.ReadAllBytesAsync(defaultPath);
@@ -400,22 +448,14 @@ namespace tagApi.Controllers.Hrd
                     else
                     {
                         reportData.SIGNATURE_BASE64 = null;
+                        Console.WriteLine($"TTD tidak ditemukan: {cleanNoKontrak}");
                     }
-
-                    Console.WriteLine($"TTD tidak ditemukan: {cleanNoKontrak}");
                 }
 
-                // ===============================
-                // GENERATE REPORT
-                // ===============================
                 var report = new RefKontrakPwkt();
                 report.DataSource = new[] { reportData };
-
                 report.CreateDocument();
 
-                // ===============================
-                // EXPORT PDF
-                // ===============================
                 using MemoryStream ms = new MemoryStream();
                 report.ExportToPdf(ms);
 
@@ -446,14 +486,17 @@ namespace tagApi.Controllers.Hrd
             }
         }
 
-
         #region pasal
         private string GetPasal1(dynamic d)
         {
+            var perusahaan = (string?)d.NMPERUSAHAAN ?? "Tunas Artha Gardatama";
+            var bagian = (string?)d.NMBAGIAN ?? "-";
+            var jabatan = (string?)d.NMJABATAN ?? "-";
+
             return $@"{{\rtf1\ansi
 \fs20
 
-\pard\li400\fi-400 1.\tab Perusahaan  PT. Tunas Artha Gardatama mempekerjakan Karyawan atas nama tersebut dia atas pada bagian SOFTWARE dengan Jabatan/posisi sebagai STAFF untuk Jangka Waktu Tertentu.\par
+\pard\li400\fi-400 1.\tab Perusahaan  PT. {perusahaan} mempekerjakan Karyawan atas nama tersebut dia atas pada bagian {bagian} dengan Jabatan/posisi sebagai {jabatan} untuk Jangka Waktu Tertentu.\par
 
 \pard\li400\fi-400 2.\tab Karyawan menerima dan sanggup melaksanakan kewajiban-kewajiban dan tugas-tugas yang dibebankan kepadanya oleh Perusahaan, sehubungan dengan jabatannya yang disebut dalam ayat 1 pasal ini dengan sebaik-baiknya dan penuh rasa tanggung jawab.\par
 
@@ -503,27 +546,6 @@ mana saja dikemudian hari sesuai dengan kepentingan Perusahaan..\par
 
 }}";
         }
-
-        //private string GetPasal2(dynamic d)
-        //{
-        //    return $@"{{\rtf1\ansi
-        //        \b PASAL 2\b0\par
-        //        Jangka Waktu Kontrak\par\par
-        //        Perjanjian kerja ini berlaku sejak {d.PAWAL:dd MMMM yyyy} sampai dengan {d.PAKHIR:dd MMMM yyyy}.\par
-        //        Apabila salah satu pihak tidak memperpanjang, maka hubungan kerja berakhir secara otomatis.\par
-        //        Pemutusan sebelum masa berakhir harus diberitahukan minimal 30 hari sebelumnya.\par
-        //    }}";
-        //}
-
-        //private string GetPasal3()
-        //{
-        //    return @"{\rtf1\ansi
-        //        \b PASAL 3\b0\par
-        //        Penempatan dan Mutasi\par\par
-        //        Perusahaan berhak menempatkan karyawan di lokasi kerja sesuai kebutuhan.\par
-        //        Karyawan bersedia dipindahkan sesuai kepentingan perusahaan.\par
-        //    }";
-        //}
         #endregion
 
     }

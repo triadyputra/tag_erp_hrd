@@ -42,6 +42,7 @@ namespace tagApiHrd.Controllers.monitoring
             string? cabang,
             DateTime? tglAwal,
             DateTime? tglAkhir,
+            string? keputusan,
             int page = 1,
             int pageSize = 10)
         {
@@ -57,6 +58,7 @@ namespace tagApiHrd.Controllers.monitoring
                     finalCabang,
                     tglAwal,
                     tglAkhir,
+                    keputusan,
                     page,
                     pageSize
                 );

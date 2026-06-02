@@ -1,5 +1,6 @@
 ﻿using DevExpress.XtraReports.UI;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,7 @@ using tagApiHrd.Model.Dto.cuti;
 using tagApiHrd.Model.Dto.legal;
 using tagApiHrd.Model.Dto.mobile;
 using tagApiHrd.Model.Dto.report;
+using tagApi.Report.Hrd;
 using tagApiHrd.Report.Hrd;
 using tagApiHrd.Services.Berita;
 using tagApiHrd.Services.Legal;
@@ -27,15 +29,16 @@ namespace tagApiHrd.Controllers.Mobile
         private readonly IRepoPacklaring _repoPacklaring;
         private readonly UserManager<ApplicationUser> userManager;
         private readonly string _ttdPath;
+        private readonly string _wwwrootPath;
         private readonly IBeritaService _beritaService;
 
-        public MobileHrController(IRepoHrd repo, IRepoPacklaring repoPacklaring, UserManager<ApplicationUser> userManager, IConfiguration configuration, IBeritaService beritaService)
+        public MobileHrController(IRepoHrd repo, IRepoPacklaring repoPacklaring, UserManager<ApplicationUser> userManager, IConfiguration configuration, IBeritaService beritaService, IWebHostEnvironment webHostEnvironment)
         {
             _repo = repo;
             _repoPacklaring = repoPacklaring;
             this.userManager = userManager;
-            // 🔥 ambil dari appsettings
             _ttdPath = configuration["FileStorage:TtdPath"] ?? "D:/TAG/Storage/";
+            _wwwrootPath = webHostEnvironment.WebRootPath;
             _beritaService = beritaService;
         }
 
@@ -56,9 +59,6 @@ namespace tagApiHrd.Controllers.Mobile
                     return NotFound(ApiResponse<object>.Error("Data kontrak tidak ditemukan", "404"));
                 }
 
-                // ===============================
-                // MAPPING DTO
-                // ===============================
                 var reportData = new KontrakReportDto
                 {
                     NoKontrak = dataDb.NOKONTRAK,
@@ -68,6 +68,7 @@ namespace tagApiHrd.Controllers.Mobile
                     Alamat = dataDb.ALAMAT,
                     Telepon = dataDb.NOHANDPHONE,
                     Jabatan = dataDb.NMJABATAN,
+                    NmBagian = dataDb.NMBAGIAN,
                     TglMulai = dataDb.PAWAL,
                     TglSelesai = dataDb.PAKHIR,
                     JenisKelamin = dataDb.KELAMIN,
@@ -76,28 +77,30 @@ namespace tagApiHrd.Controllers.Mobile
                     TempatLahir = dataDb.TEMPATLAHIR,
                     TanggalLahir = dataDb.TGLLAHIR,
                     StatusTtd = dataDb.Status,
-                    //Pasal1 = GetPasal1(dataDb),
-                    //Pasal2 = GetPasal2(dataDb),
-                    //Pasal3 = GetPasal3(dataDb)
+                    NmPerusahaan = dataDb.NMPERUSAHAAN,
                 };
 
-                // ===============================
-                // AMBIL SIGNATURE
-                // ===============================
-                var cleanNoKontrak = dataDb.NOKONTRAK.Replace("/", "").Trim();
+                reportData.LOGO_BASE64 = await KontrakPkwtLogoHelper.LoadLogoBase64Async(
+                    _wwwrootPath, dataDb.NMPERUSAHAAN);
 
+                if (dataDb.Status == 2)
+                {
+                    var ttdHrdPath = Path.Combine(_wwwrootPath, "ttd_hrd.png");
+                    if (System.IO.File.Exists(ttdHrdPath))
+                    {
+                        var hrdBytes = await System.IO.File.ReadAllBytesAsync(ttdHrdPath);
+                        reportData.HRD_SIGNATURE_BASE64 = Convert.ToBase64String(hrdBytes);
+                    }
+                }
+
+                var cleanNoKontrak = dataDb.NOKONTRAK.Replace("/", "").Trim();
                 string? foundPath = null;
 
                 try
                 {
-                    var file = Directory
+                    foundPath = Directory
                         .GetFiles(_ttdPath, $"{cleanNoKontrak}.*", SearchOption.TopDirectoryOnly)
                         .FirstOrDefault();
-
-                    if (file != null)
-                    {
-                        foundPath = file;
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -107,7 +110,6 @@ namespace tagApiHrd.Controllers.Mobile
                 if (!string.IsNullOrEmpty(foundPath))
                 {
                     var bytes = await System.IO.File.ReadAllBytesAsync(foundPath);
-
                     var ext = Path.GetExtension(foundPath).ToLower();
                     var mime = ext switch
                     {
@@ -115,7 +117,6 @@ namespace tagApiHrd.Controllers.Mobile
                         ".png" => "image/png",
                         _ => "application/octet-stream"
                     };
-
                     reportData.SIGNATURE_BASE64 = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
                 }
                 else
@@ -123,9 +124,6 @@ namespace tagApiHrd.Controllers.Mobile
                     reportData.SIGNATURE_BASE64 = null;
                 }
 
-                // ===============================
-                // GENERATE PDF
-                // ===============================
                 var report = new RefKontrakPwkt();
                 report.DataSource = new[] { reportData };
                 report.CreateDocument();

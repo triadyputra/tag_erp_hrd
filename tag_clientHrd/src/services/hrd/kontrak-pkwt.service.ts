@@ -16,6 +16,7 @@ interface FetchKontrakPkwtParams {
   cabang?: string
   namaKaryawan?: string
   perusahaan?: string
+  statusTtd?: number | null
   page: number
   pageSize: number
 }
@@ -34,9 +35,15 @@ export async function fetchKontrakPkwt(
     perusahaan: params.perusahaan ?? '',
     page: params.page.toString(),
     pageSize: params.pageSize.toString(),
-  }).toString()
+  })
 
-  const res = await authFetch(`${LIST_URL}?${query}`)
+  if (params.statusTtd !== undefined && params.statusTtd !== null) {
+    query.set('statusTtd', String(params.statusTtd))
+  }
+
+  const queryString = query.toString()
+
+  const res = await authFetch(`${LIST_URL}?${queryString}`)
   const json = await res.json()
 
   if (!res.ok) {
@@ -129,6 +136,35 @@ export async function deleteKontrakPkwt(
       json?.Metadata?.Message ||
       json?.message ||
       "Gagal menghapus kontrak"
+    )
+  }
+
+  return json?.data ?? json
+}
+
+// ===============================
+// APPROVE KONTRAK (ttd = 2)
+// ===============================
+export async function approveKontrakPkwt(noKontrak: string) {
+  if (!noKontrak) {
+    throw new Error('No kontrak wajib diisi')
+  }
+
+  const res = await authFetch(`${BASE_URL}/ApproveKontrakPkwt`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(noKontrak),
+  })
+
+  const json = await res.json()
+
+  if (!res.ok) {
+    throw new Error(
+      json?.Metadata?.Message ||
+      json?.message ||
+      'Gagal approve kontrak'
     )
   }
 

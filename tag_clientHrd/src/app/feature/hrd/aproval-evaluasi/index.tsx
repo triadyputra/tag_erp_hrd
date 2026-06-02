@@ -33,6 +33,17 @@ import { IconEdit } from '@tabler/icons-react'
 import FormAprovalEvaluasi from './FormAprovalEvaluasi'
 import AccessButton from '@/app/components/buttons/AccessButton'
 
+function normalizeKeputusan(raw?: string | null) {
+  const text = String(raw ?? '').trim()
+  if (!text) return 'MENUNGGU'
+
+  const norm = text.toUpperCase()
+  if (norm.includes('MENUNGGU')) return 'MENUNGGU'
+  if (norm.includes('TIDAK PERPANJANG') || norm.includes('TIDAK')) return 'TIDAK PERPANJANG'
+  if (norm.includes('PERPANJANG')) return 'PERPANJANG'
+  return text
+}
+
 function KeputusanBadge({ raw }: { raw?: string | null }) {
   const text = String(raw ?? '').trim()
   if (!text) {
@@ -58,14 +69,7 @@ function KeputusanBadge({ raw }: { raw?: string | null }) {
   const norm = text.toUpperCase()
 
   // Normalisasi nilai keputusan → 3 opsi tampilan
-  const normalized =
-    norm.includes('MENUNGGU')
-      ? 'MENUNGGU'
-      : norm.includes('TIDAK PERPANJANG') || norm.includes('TIDAK')
-        ? 'TIDAK PERPANJANG'
-        : norm.includes('PERPANJANG')
-          ? 'PERPANJANG'
-          : text
+  const normalized = normalizeKeputusan(text)
 
   // Warna soft/pastel
   const map: Record<string, { bg: string; fg: string }> = {
@@ -97,18 +101,27 @@ function KeputusanBadge({ raw }: { raw?: string | null }) {
 const AprovalEvaluasiListComponent = () => {
   const { showSnackbar } = useSnackbar()
   const today = dayjs().format('YYYY-MM-DD')
+  const thirtyDaysAgo = dayjs().subtract(30, 'day').format('YYYY-MM-DD')
+
+  const keputusanOptions = [
+    { value: 'MENUNGGU', title: 'MENUNGGU' },
+    { value: 'PERPANJANG', title: 'PERPANJANG' },
+    { value: 'TIDAK PERPANJANG', title: 'TIDAK PERPANJANG' },
+  ]
 
   // INPUT
   const [inputNama, setInputNama] = useState('')
   const [inputCabang, setInputCabang] = useState('')
-  const [inputTglAwal, setInputTglAwal] = useState<string | null>(today)
+  const [inputTglAwal, setInputTglAwal] = useState<string | null>(thirtyDaysAgo)
   const [inputTglAkhir, setInputTglAkhir] = useState<string | null>(today)
+  const [inputKeputusan, setInputKeputusan] = useState<string[]>([])
 
   // FILTER
   const [filterNama, setFilterNama] = useState('')
   const [filterCabang, setFilterCabang] = useState('')
-  const [filterTglAwal, setFilterTglAwal] = useState<string | null>(today)
+  const [filterTglAwal, setFilterTglAwal] = useState<string | null>(thirtyDaysAgo)
   const [filterTglAkhir, setFilterTglAkhir] = useState<string | null>(today)
+  const [filterKeputusan, setFilterKeputusan] = useState<string[]>([])
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -132,6 +145,7 @@ const AprovalEvaluasiListComponent = () => {
       filterCabang,
       filterTglAwal,
       filterTglAkhir,
+      filterKeputusan.join('|'),
       page,
       pageSize,
     ],
@@ -141,6 +155,7 @@ const AprovalEvaluasiListComponent = () => {
         cabang: filterCabang,
         tglAwal: filterTglAwal ?? '',
         tglAkhir: filterTglAkhir ?? '',
+        keputusan: filterKeputusan.join(','),
         page,
         pageSize,
       }),
@@ -152,6 +167,13 @@ const AprovalEvaluasiListComponent = () => {
   )
 
   const list = data?.Data ?? data?.data ?? []
+  const listFiltered = (Array.isArray(list) ? list : []).filter((item: any) => {
+    const keputusan = normalizeKeputusan(item?.Keputusan)
+    // Jika combo keputusan belum dipilih (null/empty) → tidak filter berdasarkan keputusan
+    if (!filterKeputusan?.length) return true
+    const allowed = new Set(filterKeputusan.map((x) => x))
+    return allowed.has(keputusan)
+  })
   const total = data?.TotalCount ?? data?.totalCount ?? 0
   const loading = isLoading && !data
 
@@ -167,6 +189,7 @@ const AprovalEvaluasiListComponent = () => {
     setFilterCabang(inputCabang)
     setFilterTglAwal(inputTglAwal)
     setFilterTglAkhir(inputTglAkhir)
+    setFilterKeputusan(inputKeputusan)
     setPage(1)
   }
 
@@ -218,6 +241,30 @@ const AprovalEvaluasiListComponent = () => {
             sx={{ minWidth: { xs: '100%', sm: 200 } }}
             renderInput={(params) => (
               <TextField {...params} size="small" label="Cabang" InputLabelProps={{ shrink: true }} />
+            )}
+          />
+
+          <Autocomplete
+            multiple
+            options={keputusanOptions}
+            getOptionLabel={(o) => o?.title ?? ''}
+            value={keputusanOptions.filter((x) => inputKeputusan.includes(x.value))}
+            onChange={(_, v) => {
+              const next = (v ?? []).map((x) => x.value)
+              setInputKeputusan(next)
+              setFilterKeputusan(next)
+              setPage(1)
+            }}
+            isOptionEqualToValue={(o, v) => o.value === v.value}
+            sx={{ minWidth: { xs: '100%', sm: 220 } }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                size="small"
+                label="Keputusan"
+                InputLabelProps={{ shrink: true }}
+                placeholder="Pilih..."
+              />
             )}
           />
 
@@ -321,7 +368,7 @@ const AprovalEvaluasiListComponent = () => {
                   </Typography>
                 </TableCell>
               </TableRow>
-            ) : list.length === 0 ? (
+            ) : listFiltered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={colSpan} align="center" sx={{ py: 4 }}>
                   <Typography fontSize={13} color="text.secondary">
@@ -330,7 +377,7 @@ const AprovalEvaluasiListComponent = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              list.map((item: any, idx: number) => (
+              listFiltered.map((item: any, idx: number) => (
                 <TableRow key={item.NoTran ?? idx} hover>
                   <TableCell sx={{ py: 2, maxWidth: 220 }}>
                     <Typography

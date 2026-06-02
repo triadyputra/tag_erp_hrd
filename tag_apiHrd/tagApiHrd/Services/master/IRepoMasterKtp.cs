@@ -34,6 +34,13 @@ namespace tagApiHrd.Services.master
         );
 
         // ===============================
+        // UPDATE NOMOR KTP
+        // ===============================
+        Task<ApiResponse<object>> UpdateNomorKtp(
+            UpdateNomorKtpDto dto
+        );
+
+        // ===============================
         // DELETE
         // ===============================
         Task<ApiResponse<object>> DeleteDataKtp(

@@ -10,6 +10,7 @@ export interface FetchAprovalEvaluasiParams {
   cabang?: string
   tglAwal?: string
   tglAkhir?: string
+  keputusan?: string
   page: number
   pageSize: number
 }
@@ -42,6 +43,7 @@ export async function fetchAprovalEvaluasiList(params: FetchAprovalEvaluasiParam
     cabang: params.cabang ?? '',
     tglAwal: params.tglAwal ?? '',
     tglAkhir: params.tglAkhir ?? '',
+    keputusan: params.keputusan ?? '',
     page: params.page.toString(),
     pageSize: params.pageSize.toString(),
   }).toString()

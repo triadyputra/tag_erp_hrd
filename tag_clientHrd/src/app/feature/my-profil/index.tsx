@@ -73,9 +73,9 @@ export default function MyProfil() {
     setLoading(true)
     try {
       await changePassword({
-        username: user?.username ?? undefined,
-        oldPassword,
-        newPassword,
+        CurrentPassword: oldPassword,
+        NewPassword: newPassword,
+        ConfimrNewPassword: confirmPassword,
       })
 
       showSnackbar('Password berhasil diubah', 'success')

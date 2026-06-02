@@ -28,6 +28,7 @@ namespace tagApiHrd.Services.Legal
         string? kdCabang,
         DateTime? tglAwal,
         DateTime? tglAkhir,
+        string? keputusan,
         int page,
         int pageSize);
 

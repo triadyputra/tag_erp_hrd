@@ -13,7 +13,9 @@ interface FetchKontrakParams {
   namaKaryawan?: string
   jenisKontrak?: string
   cabang?: string
-  sisaKontrak?: string // 🔥 TAMBAHAN
+  sisaKontrak?: string
+  tglBerakhirAwal?: string
+  tglBerakhirAkhir?: string
   page: number
   pageSize: number
 }
@@ -29,7 +31,9 @@ export async function fetchKontrakAktif(
     namaKaryawan: params.namaKaryawan ?? '',
     jenisKontrak: params.jenisKontrak ?? '',
     cabang: params.cabang ?? '',
-    sisaKontrak: params.sisaKontrak ?? '', // 🔥 TAMBAHAN
+    sisaKontrak: params.sisaKontrak ?? '',
+    tglBerakhirAwal: params.tglBerakhirAwal ?? '',
+    tglBerakhirAkhir: params.tglBerakhirAkhir ?? '',
     page: params.page.toString(),
     pageSize: params.pageSize.toString(),
   }).toString()
@@ -57,6 +61,8 @@ export async function printDataKaryawan(params: {
   jenisKontrak?: string
   cabang?: string
   sisaKontrak?: string
+  tglBerakhirAwal?: string
+  tglBerakhirAkhir?: string
   format?: 'pdf' | 'xlsx'
 }) {
   const query = new URLSearchParams({
@@ -65,6 +71,8 @@ export async function printDataKaryawan(params: {
     jenisKontrak: params.jenisKontrak ?? '',
     cabang: params.cabang ?? '',
     sisaKontrak: params.sisaKontrak ?? '',
+    tglBerakhirAwal: params.tglBerakhirAwal ?? '',
+    tglBerakhirAkhir: params.tglBerakhirAkhir ?? '',
     format: params.format ?? 'pdf',
   }).toString()
 
