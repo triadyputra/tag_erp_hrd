@@ -26,7 +26,7 @@ import {
   FormControlLabel,
 } from '@mui/material'
 import { IconEdit, IconSearch, IconTrash } from '@tabler/icons-react'
-import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR'
 import { deleteBerita, fetchBerita, saveBerita } from '@/services/berita/berita.service'
 import AccessButton from '@/app/components/buttons/AccessButton'
 import { AddRounded } from '@mui/icons-material'
@@ -62,7 +62,8 @@ const BeritaListComponent = () => {
   const [selectedDelete, setSelectedDelete] = useState<any>(null)
   const [loadingDelete, setLoadingDelete] = useState(false)
   
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, mutate } = useAccessGatedSWR(
+    { subject: 'Berita', action: 'GetListBerita' },
     ['berita', filterJudul, filterIsPinned, page, pageSize],
     () =>
       fetchBerita({

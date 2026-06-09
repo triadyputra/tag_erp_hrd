@@ -4,4 +4,6 @@ export interface GroupList {
     Access : string;
     Keterangan : string;
     Photo : string;
+    IdModul? : string;
+    NamaModul? : string;
 }

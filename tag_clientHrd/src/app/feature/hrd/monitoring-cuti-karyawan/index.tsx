@@ -22,7 +22,7 @@ import {
 	LinearProgress,
 } from '@mui/material'
 import { IconSearch } from '@tabler/icons-react'
-import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR'
 import { useComboCabangWith } from '@/hooks/useComboGroup'
 import { getCabang } from '@/helpers/auth.helper'
 import { fetchSaldoCutiKaryawan } from '@/services/hrd/monitoring-cuti.service'
@@ -45,7 +45,8 @@ const SaldoCutiKaryawanListComponent = () => {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  const { data, isLoading } = useSWR(
+  const { data, isLoading } = useAccessGatedSWR(
+    { subject: 'MonitoringCuti', any: true },
     ['saldo-cuti', filterNama, filterCabang, filterTahun, page, pageSize],
     () =>
       fetchSaldoCutiKaryawan({

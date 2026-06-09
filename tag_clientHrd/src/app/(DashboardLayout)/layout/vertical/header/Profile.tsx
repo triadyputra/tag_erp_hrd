@@ -14,14 +14,14 @@ import {
 } from "@mui/material";
 import { Stack } from "@mui/system";
 import { IconMail } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
-
 import * as dropdownData from "./data";
-import { clearAuth, getAuthUser } from "@/helpers/auth.helper";
+import { getAuthUser } from "@/helpers/auth.helper";
 import { logout } from "@/services/auth.service";
+import { useTabWorkspace } from "@/app/context/tabWorkspaceContext";
+import { isWorkspaceRoute } from "@/app/(DashboardLayout)/workspace/routeRegistry";
 
 const Profile = () => {
-  const router = useRouter();
+  const { openTab } = useTabWorkspace();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -69,6 +69,18 @@ const Profile = () => {
     handleClose();        // tutup menu dulu
     await logout();
     window.location.replace("/auth/auth1/login");
+  };
+
+  const handleProfileNav = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string,
+    title: string
+  ) => {
+    if (isWorkspaceRoute(href)) {
+      e.preventDefault();
+      openTab(href, title);
+      handleClose();
+    }
   };
 
   return (
@@ -154,7 +166,10 @@ const Profile = () => {
         {/* 🔗 MENU ITEM */}
         {dropdownData.profile.map((profile) => (
           <Box key={profile.title} sx={{ py: 2 }} className="hover-text-primary">
-            <Link href={profile.href} onClick={handleClose}>
+            <Link
+              href={profile.href}
+              onClick={(e) => handleProfileNav(e, profile.href, profile.title)}
+            >
               <Stack direction="row" spacing={2}>
                 <Box
                   width={45}

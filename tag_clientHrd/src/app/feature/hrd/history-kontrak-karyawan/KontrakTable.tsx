@@ -131,8 +131,15 @@ export default function KontrakTable({ data = [] }: { data: any[] }) {
   const theme = useTheme();
 
   return (
-      <TableContainer component={Paper} sx={{ ...tableStyle, maxHeight: "70vh" }}>
-        <Table stickyHeader size="small">
+    <TableContainer
+      component={Paper}
+      elevation={0}
+      sx={{
+        ...tableStyle(theme),
+        overflowX: "auto",
+      }}
+    >
+      <Table size="small">
           {/* ================= HEADER ================= */}
           <TableHead>
             <TableRow
@@ -178,10 +185,14 @@ export default function KontrakTable({ data = [] }: { data: any[] }) {
                       ),
 
                       "& td": {
-                        color: theme.palette.text.primary, // 🔥 FIX DARK MODE
+                        color: theme.palette.text.primary,
                         borderBottom: "1px solid",
                         borderColor: "divider",
                         py: 1.35,
+                        verticalAlign: "top",
+                      },
+                      "&:last-child td": {
+                        borderBottom: "none",
                       },
                     }}
                   >

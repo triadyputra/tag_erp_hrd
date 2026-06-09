@@ -19,9 +19,15 @@ import {
   Typography,
   Autocomplete,
   Button,
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Badge,
 } from '@mui/material'
 import dayjs from 'dayjs'
-import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR'
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { useSnackbar } from '@/app/context/SnackbarContext'
@@ -29,7 +35,7 @@ import { getCabang } from '@/helpers/auth.helper'
 import { fetchAprovalEvaluasiList, updateAprovalEvaluasi } from '@/services/hrd/aproval-evaluasi.service'
 import { formatDate, formatNumber } from '@/utils/format'
 import { useComboCabangWith } from '@/hooks/useComboGroup'
-import { IconEdit } from '@tabler/icons-react'
+import { IconEdit, IconFilter, IconSearch } from '@tabler/icons-react'
 import FormAprovalEvaluasi from './FormAprovalEvaluasi'
 import AccessButton from '@/app/components/buttons/AccessButton'
 
@@ -114,6 +120,8 @@ const AprovalEvaluasiListComponent = () => {
   const [inputCabang, setInputCabang] = useState('')
   const [inputTglAwal, setInputTglAwal] = useState<string | null>(thirtyDaysAgo)
   const [inputTglAkhir, setInputTglAkhir] = useState<string | null>(today)
+  const [inputPAkhirAwal, setInputPAkhirAwal] = useState<string | null>(null)
+  const [inputPAkhirAkhir, setInputPAkhirAkhir] = useState<string | null>(null)
   const [inputKeputusan, setInputKeputusan] = useState<string[]>([])
 
   // FILTER
@@ -121,8 +129,12 @@ const AprovalEvaluasiListComponent = () => {
   const [filterCabang, setFilterCabang] = useState('')
   const [filterTglAwal, setFilterTglAwal] = useState<string | null>(thirtyDaysAgo)
   const [filterTglAkhir, setFilterTglAkhir] = useState<string | null>(today)
+  const [filterPAkhirAwal, setFilterPAkhirAwal] = useState<string | null>(null)
+  const [filterPAkhirAkhir, setFilterPAkhirAkhir] = useState<string | null>(null)
   const [filterKeputusan, setFilterKeputusan] = useState<string[]>([])
 
+  const [userCabang, setUserCabang] = useState<string | null>(null)
+  const [filterModalOpen, setFilterModalOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [openForm, setOpenForm] = useState(false)
@@ -131,6 +143,7 @@ const AprovalEvaluasiListComponent = () => {
   useEffect(() => {
     const cab = getCabang()
     if (cab && cab.trim() !== '') {
+      setUserCabang(cab)
       setInputCabang(cab)
       setFilterCabang(cab)
     }
@@ -138,13 +151,16 @@ const AprovalEvaluasiListComponent = () => {
 
   const { cabang: cabangOptions, loading: cabangLoading } = useComboCabangWith()
 
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, mutate } = useAccessGatedSWR(
+    { subject: 'AprovalEvaluasi', any: true },
     [
       'aproval-evaluasi',
       filterNama,
       filterCabang,
       filterTglAwal,
       filterTglAkhir,
+      filterPAkhirAwal,
+      filterPAkhirAkhir,
       filterKeputusan.join('|'),
       page,
       pageSize,
@@ -155,6 +171,8 @@ const AprovalEvaluasiListComponent = () => {
         cabang: filterCabang,
         tglAwal: filterTglAwal ?? '',
         tglAkhir: filterTglAkhir ?? '',
+        pAkhirAwal: filterPAkhirAwal ?? '',
+        pAkhirAkhir: filterPAkhirAkhir ?? '',
         keputusan: filterKeputusan.join(','),
         page,
         pageSize,
@@ -184,14 +202,58 @@ const AprovalEvaluasiListComponent = () => {
     borderBottom: `1px solid ${theme.palette.divider}`,
   })
 
-  const handleSearch = () => {
+  const applyAllFilters = () => {
+    if (
+      inputPAkhirAwal &&
+      inputPAkhirAkhir &&
+      dayjs(inputPAkhirAwal).isAfter(dayjs(inputPAkhirAkhir), 'day')
+    ) {
+      showSnackbar('PAkhir awal tidak boleh lebih besar dari PAkhir akhir', 'error')
+      return false
+    }
+
     setFilterNama(inputNama)
     setFilterCabang(inputCabang)
     setFilterTglAwal(inputTglAwal)
     setFilterTglAkhir(inputTglAkhir)
+    setFilterPAkhirAwal(inputPAkhirAwal)
+    setFilterPAkhirAkhir(inputPAkhirAkhir)
     setFilterKeputusan(inputKeputusan)
     setPage(1)
+    return true
   }
+
+  const resetDialogFilters = () => {
+    setInputKeputusan([])
+    setInputPAkhirAwal(null)
+    setInputPAkhirAkhir(null)
+  }
+
+  const resetAllFilters = () => {
+    const cab = userCabang ?? ''
+
+    setInputNama('')
+    setInputCabang(cab)
+    setInputTglAwal(thirtyDaysAgo)
+    setInputTglAkhir(today)
+    setInputKeputusan([])
+    setInputPAkhirAwal(null)
+    setInputPAkhirAkhir(null)
+
+    setFilterNama('')
+    setFilterCabang(cab)
+    setFilterTglAwal(thirtyDaysAgo)
+    setFilterTglAkhir(today)
+    setFilterKeputusan([])
+    setFilterPAkhirAwal(null)
+    setFilterPAkhirAkhir(null)
+    setPage(1)
+  }
+
+  const advancedFilterCount =
+    (filterKeputusan.length > 0 ? 1 : 0) +
+    (filterPAkhirAwal ? 1 : 0) +
+    (filterPAkhirAkhir ? 1 : 0)
 
   const periodLabel = (item: any) => {
     const aw = formatDate(item.PAwal)
@@ -208,7 +270,7 @@ const AprovalEvaluasiListComponent = () => {
         direction={{ xs: 'column', sm: 'row' }}
         spacing={1.2}
         mb={3}
-        alignItems={{ xs: 'stretch', sm: 'center' }}
+        alignItems={{ xs: 'stretch', sm: 'flex-end' }}
         justifyContent="space-between"
       >
         <Stack
@@ -217,119 +279,274 @@ const AprovalEvaluasiListComponent = () => {
           sx={{ width: { xs: '100%', sm: 'auto' } }}
         >
           <TextField
-            placeholder="Nama Karyawan"
+            placeholder="Cari Nama Karyawan"
             size="small"
             value={inputNama}
             onChange={(e) => setInputNama(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setFilterNama(inputNama)
+                setPage(1)
+              }
+            }}
+            onBlur={() => {
+              if (inputNama !== filterNama) {
+                setFilterNama(inputNama)
+                setPage(1)
+              }
+            }}
             fullWidth
             sx={{ minWidth: { xs: '100%', sm: 220 }, '& .MuiOutlinedInput-root': { height: 36 } }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment
+                  position="end"
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => {
+                    setFilterNama(inputNama)
+                    setPage(1)
+                  }}
+                >
+                  <IconSearch size={16} />
+                </InputAdornment>
+              ),
+            }}
           />
 
-          <Autocomplete
-            options={cabangOptions ?? []}
-            loading={cabangLoading}
-            getOptionLabel={(o) => o.title ?? ''}
-            value={cabangOptions?.find((x) => x.value === inputCabang) ?? null}
-            onChange={(_, v) => {
-              const val = v?.value ?? ''
-              setInputCabang(val)
-              setFilterCabang(val)
-              setPage(1)
-            }}
-            isOptionEqualToValue={(o, v) => o.value === v.value}
-            sx={{ minWidth: { xs: '100%', sm: 200 } }}
-            renderInput={(params) => (
-              <TextField {...params} size="small" label="Cabang" InputLabelProps={{ shrink: true }} />
-            )}
-          />
+          {!userCabang && (
+            <Autocomplete
+              options={cabangOptions ?? []}
+              loading={cabangLoading}
+              getOptionLabel={(o) => o.title ?? ''}
+              value={cabangOptions?.find((x) => x.value === inputCabang) ?? null}
+              onChange={(_, v) => {
+                const val = v?.value ?? ''
+                setInputCabang(val)
+                setFilterCabang(val)
+                setPage(1)
+              }}
+              isOptionEqualToValue={(o, v) => o.value === v.value}
+              fullWidth
+              sx={{ minWidth: { xs: '100%', sm: 220 } }}
+              renderInput={(params) => (
+                <TextField {...params} size="small" placeholder="Cabang" />
+              )}
+            />
+          )}
 
-          <Autocomplete
-            multiple
-            options={keputusanOptions}
-            getOptionLabel={(o) => o?.title ?? ''}
-            value={keputusanOptions.filter((x) => inputKeputusan.includes(x.value))}
-            onChange={(_, v) => {
-              const next = (v ?? []).map((x) => x.value)
-              setInputKeputusan(next)
-              setFilterKeputusan(next)
-              setPage(1)
-            }}
-            isOptionEqualToValue={(o, v) => o.value === v.value}
-            sx={{ minWidth: { xs: '100%', sm: 220 } }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                size="small"
-                label="Keputusan"
-                InputLabelProps={{ shrink: true }}
-                placeholder="Pilih..."
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+              <DatePicker
+                format="DD-MM-YYYY"
+                value={inputTglAwal ? dayjs(inputTglAwal) : null}
+                onChange={(v) => {
+                  const val = v ? v.format('YYYY-MM-DD') : null
+                  setInputTglAwal(val)
+                  setFilterTglAwal(val)
+                  setPage(1)
+                }}
+                slotProps={{
+                  textField: (params) => ({
+                    ...params,
+                    size: 'small',
+                    fullWidth: true,
+                    placeholder: 'Tgl Nilai Awal',
+                    sx: {
+                      minWidth: 200,
+                      '& .MuiOutlinedInput-root': { height: 36 },
+                    },
+                    InputProps: {
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {inputTglAwal && (
+                            <InputAdornment
+                              position="end"
+                              sx={{ cursor: 'pointer', mr: 0.5 }}
+                              onClick={() => {
+                                setInputTglAwal(null)
+                                setFilterTglAwal(null)
+                                setPage(1)
+                              }}
+                            >
+                              ✕
+                            </InputAdornment>
+                          )}
+                          {params.InputProps?.endAdornment}
+                        </>
+                      ),
+                    },
+                  }),
+                  actionBar: { actions: ['clear', 'today'] },
+                }}
               />
-            )}
-          />
 
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DatePicker
-              label="Tgl Awal"
-              format="DD-MM-YYYY"
-              value={inputTglAwal ? dayjs(inputTglAwal) : null}
-              onChange={(v) => {
-                const val = v ? v.format('YYYY-MM-DD') : null
-                setInputTglAwal(val)
-                setFilterTglAwal(val)
-                setPage(1)
-              }}
-              slotProps={{
-                textField: {
-                  size: 'small',
-                  sx: {
-                    minWidth: { xs: '100%', sm: 200 },
-                    '& .MuiInputLabel-root': { whiteSpace: 'nowrap' },
-                  },
-                },
-              }}
-            />
-          </LocalizationProvider>
-
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DatePicker
-              label="Tgl Akhir"
-              format="DD-MM-YYYY"
-              value={inputTglAkhir ? dayjs(inputTglAkhir) : null}
-              onChange={(v) => {
-                const val = v ? v.format('YYYY-MM-DD') : null
-                setInputTglAkhir(val)
-                setFilterTglAkhir(val)
-                setPage(1)
-              }}
-              slotProps={{
-                textField: {
-                  size: 'small',
-                  sx: {
-                    minWidth: { xs: '100%', sm: 200 },
-                    '& .MuiInputLabel-root': { whiteSpace: 'nowrap' },
-                  },
-                },
-              }}
-            />
+              <DatePicker
+                format="DD-MM-YYYY"
+                value={inputTglAkhir ? dayjs(inputTglAkhir) : null}
+                onChange={(v) => {
+                  const val = v ? v.format('YYYY-MM-DD') : null
+                  setInputTglAkhir(val)
+                  setFilterTglAkhir(val)
+                  setPage(1)
+                }}
+                slotProps={{
+                  textField: (params) => ({
+                    ...params,
+                    size: 'small',
+                    fullWidth: true,
+                    placeholder: 'Tgl Nilai Akhir',
+                    sx: {
+                      minWidth: 200,
+                      '& .MuiOutlinedInput-root': { height: 36 },
+                    },
+                    InputProps: {
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {inputTglAkhir && (
+                            <InputAdornment
+                              position="end"
+                              sx={{ cursor: 'pointer', mr: 0.5 }}
+                              onClick={() => {
+                                setInputTglAkhir(null)
+                                setFilterTglAkhir(null)
+                                setPage(1)
+                              }}
+                            >
+                              ✕
+                            </InputAdornment>
+                          )}
+                          {params.InputProps?.endAdornment}
+                        </>
+                      ),
+                    },
+                  }),
+                  actionBar: { actions: ['clear', 'today'] },
+                }}
+              />
+            </Stack>
           </LocalizationProvider>
         </Stack>
 
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Button
-            variant="contained"
-            onClick={handleSearch}
-            disabled={loading}
-            sx={{ height: 36, minWidth: 120 }}
-          >
-            {loading ? <CircularProgress size={18} color="inherit" /> : 'Cari'}
-          </Button>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            width: { xs: '100%', sm: 'auto' },
+            justifyContent: { xs: 'stretch', sm: 'flex-end' },
+          }}
+        >
+          <Badge color="primary" badgeContent={advancedFilterCount} invisible={advancedFilterCount === 0}>
+            <Button
+              variant="outlined"
+              startIcon={<IconFilter size={18} />}
+              onClick={() => setFilterModalOpen(true)}
+              sx={{ height: 36, whiteSpace: 'nowrap' }}
+            >
+              Filter
+            </Button>
+          </Badge>
         </Stack>
       </Stack>
 
+      <Dialog open={filterModalOpen} onClose={() => setFilterModalOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 700 }}>Filter Lanjutan</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} pt={0.5}>
+            <Autocomplete
+              multiple
+              options={keputusanOptions}
+              getOptionLabel={(o) => o?.title ?? ''}
+              value={keputusanOptions.filter((x) => inputKeputusan.includes(x.value))}
+              onChange={(_, v) => setInputKeputusan((v ?? []).map((x) => x.value))}
+              isOptionEqualToValue={(o, v) => o.value === v.value}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  size="small"
+                  label="Keputusan"
+                  placeholder="Pilih keputusan..."
+                />
+              )}
+            />
+
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <DatePicker
+                  label="PAkhir Awal"
+                  format="DD-MM-YYYY"
+                  value={inputPAkhirAwal ? dayjs(inputPAkhirAwal) : null}
+                  onChange={(v) => setInputPAkhirAwal(v ? v.format('YYYY-MM-DD') : null)}
+                  slotProps={{
+                    textField: { size: 'small', fullWidth: true },
+                    actionBar: { actions: ['clear', 'today'] },
+                  }}
+                />
+                <DatePicker
+                  label="PAkhir Akhir"
+                  format="DD-MM-YYYY"
+                  value={inputPAkhirAkhir ? dayjs(inputPAkhirAkhir) : null}
+                  onChange={(v) => setInputPAkhirAkhir(v ? v.format('YYYY-MM-DD') : null)}
+                  slotProps={{
+                    textField: { size: 'small', fullWidth: true },
+                    actionBar: { actions: ['clear', 'today'] },
+                  }}
+                />
+              </Stack>
+            </LocalizationProvider>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, flexWrap: 'wrap', gap: 1 }}>
+          <Button color="inherit" onClick={resetDialogFilters}>
+            Reset Filter
+          </Button>
+          <Button
+            color="error"
+            variant="outlined"
+            onClick={() => {
+              resetAllFilters()
+              setFilterModalOpen(false)
+            }}
+          >
+            Reset Semua
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          <Button onClick={() => setFilterModalOpen(false)}>Batal</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (applyAllFilters()) setFilterModalOpen(false)
+            }}
+          >
+            Terapkan
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* ================= TABLE ================= */}
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small">
+      <Box
+        sx={{
+          width: 0,
+          minWidth: '100%',
+          maxWidth: '100%',
+          minHeight: 0,
+        }}
+      >
+        <TableContainer
+          component={Paper}
+          variant="outlined"
+          sx={{
+            display: 'block',
+            width: '100%',
+            maxWidth: '100%',
+            maxHeight: '70vh',
+            borderRadius: 2,
+            overflow: 'auto',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <Table stickyHeader size="small" sx={{ width: 'max-content', minWidth: '100%', tableLayout: 'auto' }}>
           <TableHead>
             <TableRow>
               <TableCell sx={headerStyle} style={{ whiteSpace: 'nowrap' }}>
@@ -341,18 +558,34 @@ const AprovalEvaluasiListComponent = () => {
               <TableCell sx={headerStyle} style={{ whiteSpace: 'nowrap' }}>
                 Divisi / Bagian / Jabatan
               </TableCell>
-              <TableCell sx={headerStyle}>Atasan</TableCell>
-              <TableCell sx={headerStyle}>Periode</TableCell>
-              <TableCell sx={headerStyle} align="right">
+              <TableCell sx={headerStyle} style={{ whiteSpace: 'nowrap' }}>
+                Atasan
+              </TableCell>
+              <TableCell sx={headerStyle} style={{ whiteSpace: 'nowrap' }}>
+                Periode
+              </TableCell>
+              <TableCell sx={headerStyle} align="right" style={{ whiteSpace: 'nowrap' }}>
                 Nilai
               </TableCell>
-              <TableCell sx={headerStyle}>Rekomendasi</TableCell>
-              <TableCell sx={headerStyle}>Alasan</TableCell>
               <TableCell sx={headerStyle} style={{ whiteSpace: 'nowrap' }}>
+                Rekomendasi
+              </TableCell>
+              <TableCell
+                sx={headerStyle}
+                style={{ whiteSpace: 'nowrap', maxWidth: 220, width: 220 }}
+              >
+                Alasan
+              </TableCell>
+              <TableCell
+                sx={headerStyle}
+                style={{ whiteSpace: 'nowrap', maxWidth: 220, width: 220 }}
+              >
                 Catatan HRD
               </TableCell>
-              <TableCell sx={headerStyle}>Keputusan</TableCell>
-              <TableCell sx={headerStyle} align="center">
+              <TableCell sx={headerStyle} style={{ whiteSpace: 'nowrap' }}>
+                Keputusan
+              </TableCell>
+              <TableCell sx={headerStyle} align="center" style={{ whiteSpace: 'nowrap' }}>
                 Aksi
               </TableCell>
             </TableRow>
@@ -379,30 +612,20 @@ const AprovalEvaluasiListComponent = () => {
             ) : (
               listFiltered.map((item: any, idx: number) => (
                 <TableRow key={item.NoTran ?? idx} hover>
-                  <TableCell sx={{ py: 2, maxWidth: 220 }}>
-                    <Typography
-                      fontSize={12.5}
-                      fontWeight={800}
-                      color="text.primary"
-                      sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                    >
+                  <TableCell sx={{ py: 2, whiteSpace: 'nowrap' }}>
+                    <Typography fontSize={12.5} fontWeight={800} color="text.primary">
                       {item.NoTran ?? '-'}
                     </Typography>
-                    <Typography
-                      fontSize={12}
-                      color="text.secondary"
-                      sx={{ mt: 0.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                    >
+                    <Typography fontSize={12} color="text.secondary" sx={{ mt: 0.25 }}>
                       {item.NoKontrak ?? '-'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ py: 2, maxWidth: 260 }}>
+                  <TableCell sx={{ py: 2, whiteSpace: 'nowrap' }}>
                     <Typography
                       fontSize={13}
                       lineHeight={1.3}
                       color="text.primary"
                       fontWeight={800}
-                      sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                     >
                       {item.NmKaryawan ?? '-'}
                     </Typography>
@@ -410,7 +633,7 @@ const AprovalEvaluasiListComponent = () => {
                       {item.Nip ?? '-'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ py: 2, maxWidth: 320 }}>
+                  <TableCell sx={{ py: 2, whiteSpace: 'nowrap' }}>
                     <Typography fontSize={13} lineHeight={1.35} color="text.primary">
                       {item.NmDivisi ?? '-'}
                     </Typography>
@@ -418,48 +641,53 @@ const AprovalEvaluasiListComponent = () => {
                       {item.NmBagian ?? '-'} • {item.NmJabatan ?? '-'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ py: 2 }}>{item.NmAtasan ?? '-'}</TableCell>
-                  <TableCell sx={{ py: 2, maxWidth: 190 }}>
-                    <Typography fontSize={12.5} fontWeight={700} lineHeight={1.25} color="text.primary" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <TableCell sx={{ py: 2, whiteSpace: 'nowrap' }}>{item.NmAtasan ?? '-'}</TableCell>
+                  <TableCell sx={{ py: 2, whiteSpace: 'nowrap' }}>
+                    <Typography fontSize={12.5} fontWeight={700} lineHeight={1.25} color="text.primary">
                       {formatDate(item.PAwal)}
                     </Typography>
-                    <Typography fontSize={12} lineHeight={1.2} color="text.secondary" sx={{ mt: 0.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <Typography fontSize={12} lineHeight={1.2} color="text.secondary" sx={{ mt: 0.25 }}>
                       {formatDate(item.PAkhir)}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ py: 2 }} align="right">
+                  <TableCell sx={{ py: 2, whiteSpace: 'nowrap' }} align="right">
                     {formatNumber(Number(item.Nilai ?? 0))}
                   </TableCell>
-                  <TableCell sx={{ py: 2, maxWidth: 220 }}>{item.Rekomendasi ?? '-'}</TableCell>
-                  <TableCell sx={{ py: 2, maxWidth: 220 }}>{item.Catatan ?? '-'}</TableCell>
-                  <TableCell sx={{ py: 2, maxWidth: 340 }}>
-                    <Box>
-                      {item.CatatanHrd ? (
-                        <Typography
-                          fontSize={12}
-                          lineHeight={1.2}
-                          color="text.secondary"
-                          sx={{
-                            mt: 0,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {item.CatatanHrd}
-                        </Typography>
-                      ) : null}
-                      {!item.CatatanHrd && (
-                        <Typography fontSize={13} color="text.secondary">
-                          -
-                        </Typography>
-                      )}
-                    </Box>
+                  <TableCell sx={{ py: 2, whiteSpace: 'nowrap' }}>{item.Rekomendasi ?? '-'}</TableCell>
+                  <TableCell
+                    sx={{
+                      py: 2,
+                      maxWidth: 220,
+                      width: 220,
+                      minWidth: 120,
+                      whiteSpace: 'normal',
+                      wordBreak: 'break-word',
+                      verticalAlign: 'top',
+                    }}
+                  >
+                    <Typography fontSize={12.5} lineHeight={1.35} color="text.primary">
+                      {item.Catatan ?? '-'}
+                    </Typography>
                   </TableCell>
-                  <TableCell sx={{ py: 2 }}>
+                  <TableCell
+                    sx={{
+                      py: 2,
+                      maxWidth: 220,
+                      width: 220,
+                      minWidth: 120,
+                      whiteSpace: 'normal',
+                      wordBreak: 'break-word',
+                      verticalAlign: 'top',
+                    }}
+                  >
+                    <Typography fontSize={12.5} lineHeight={1.35} color="text.primary">
+                      {item.CatatanHrd ?? '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ py: 2, whiteSpace: 'nowrap' }}>
                     <KeputusanBadge raw={item.Keputusan} />
                   </TableCell>
-                  <TableCell sx={{ py: 2 }} align="center">
+                  <TableCell sx={{ py: 2, whiteSpace: 'nowrap' }} align="center">
                     <AccessButton
                       access={{ subject: 'AprovalEvaluasi', action: 'UpdateEvaluasi' }}
                       size="small"
@@ -477,12 +705,14 @@ const AprovalEvaluasiListComponent = () => {
               ))
             )}
           </TableBody>
-        </Table>
-      </TableContainer>
+          </Table>
+        </TableContainer>
+      </Box>
 
       {/* ================= PAGINATION ================= */}
       <TablePagination
         component="div"
+        sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}
         count={total}
         page={page - 1}
         onPageChange={(_, newPage) => setPage(newPage + 1)}

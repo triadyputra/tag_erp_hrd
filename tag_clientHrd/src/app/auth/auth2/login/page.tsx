@@ -9,6 +9,7 @@ import Typography from '@mui/material/Typography';
 import Logo from '@/app/(DashboardLayout)/layout/shared/logo/Logo';
 import PageContainer from '@/app/components/container/PageContainer';
 import AuthLogin from '../../authForms/AuthLogin';
+import LoginApiStatus from '../../authForms/LoginApiStatus';
 
 export default function Login2() {
   
@@ -64,6 +65,7 @@ export default function Login2() {
                   </Stack>
                 }
               />
+              <LoginApiStatus />
             </Card>
           </Grid>
         </Grid>

@@ -1026,12 +1026,6 @@ const FormCutiKaryawan: React.FC<Props> = ({
 											}
 
 											const tgl = v.format("YYYY-MM-DD")
-
-											const day = v.day()
-											if (day === 0 || day === 6) {
-												showSnackbar("Tidak bisa pilih hari Sabtu/Minggu", "warning")
-												return
-											}
 											
 											setValues(prev => {
 												// 🔥 toggle (klik lagi = hapus)
@@ -1060,9 +1054,6 @@ const FormCutiKaryawan: React.FC<Props> = ({
 
 											if (values.DetailTanggal.includes(tgl)) return true
 
-											const day = date.day()
-											if (day === 0 || day === 6) return true
-
 											return false
 										}}
 										slotProps={{
@@ -1075,7 +1066,7 @@ const FormCutiKaryawan: React.FC<Props> = ({
 									/>
 								</LocalizationProvider>
 								<Typography fontSize={11} color="text.secondary" mt={0.5}>
-									Hanya hari ini ke depan (tidak boleh backdate). Sabtu/Minggu tidak dapat dipilih.
+									Hanya hari ini ke depan (tidak boleh backdate). Sabtu/Minggu dapat dipilih.
 								</Typography>
 								<Box mt={2}>
 									<Typography fontSize={12} color="text.secondary">

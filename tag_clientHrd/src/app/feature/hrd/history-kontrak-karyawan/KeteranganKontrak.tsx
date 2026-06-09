@@ -1,95 +1,90 @@
-import { Box, Typography, Grid, Stack } from "@mui/material";
-import { alpha } from "@mui/material/styles";
-import { textBlue, textRed } from "./karyawanStyles";
+import { Box, Stack, Typography } from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
+import { IconInfoCircle } from "@tabler/icons-react";
+import { borderColor, textBlue, textRed } from "./karyawanStyles";
+
+const LEGEND = [
+  { label: "Non Aktif", color: "#ef4444" },
+  { label: "Akan Aktif", color: "#f59e0b" },
+  { label: "Sedang Aktif", color: "#22c55e" },
+];
 
 export default function KeteranganKontrak() {
+  const theme = useTheme();
+
   return (
     <Box
-      sx={(theme) => ({
-        p: 2,
-        borderRadius: 3,
-        background:
+      sx={{
+        p: 1.75,
+        borderRadius: 2,
+        border: `1px solid ${borderColor(theme)}`,
+        bgcolor:
           theme.palette.mode === "dark"
-            ? alpha(theme.palette.background.paper, 0.5)
-            : "linear-gradient(180deg, rgba(2,132,199,0.03), rgba(255,255,255,1) 60%)",
-        border: `1px solid ${
-          theme.palette.mode === "dark"
-            ? alpha("#fff", 0.10)
-            : alpha("#0f172a", 0.07)
-        }`,
-      })}
+            ? alpha(theme.palette.info.main, 0.08)
+            : alpha(theme.palette.primary.main, 0.04),
+      }}
     >
-      <Typography
-        sx={(theme) => ({
-          fontWeight: 900,
-          mb: 1,
-          fontSize: 13.5,
-          color: theme.palette.text.primary,
-        })}
+      <Stack
+        direction={{ xs: "column", lg: "row" }}
+        spacing={2}
+        alignItems={{ xs: "flex-start", lg: "center" }}
+        justifyContent="space-between"
       >
-        Keterangan
-      </Typography>
+        <Stack direction="row" spacing={1.25} alignItems="flex-start" sx={{ flex: 1, minWidth: 0 }}>
+          <Box
+            sx={{
+              mt: 0.25,
+              color: "primary.main",
+              display: "flex",
+              flexShrink: 0,
+            }}
+          >
+            <IconInfoCircle size={18} stroke={1.75} />
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography fontWeight={800} fontSize={13} mb={0.5}>
+              Keterangan status kontrak
+            </Typography>
+            <Typography sx={(t) => ({ ...textRed(t), lineHeight: 1.5 })}>
+              Kontrak aktif: Tgl. Aktif ≤ hari ini dan P.Akhir ≥ hari ini.
+            </Typography>
+            <Typography sx={(t) => ({ ...textBlue(t), lineHeight: 1.5, mt: 0.35 })}>
+              PKWT: Tgl. Aktif = P.AWAL + 3 bulan. Selain PKWT: Tgl. Aktif = P.AWAL.
+            </Typography>
+          </Box>
+        </Stack>
 
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Typography sx={(theme) => ({ ...textRed(theme), opacity: 0.85 })}>
-            Data Kontrak yang AKTIVE adalah Data Kontrak yang :
-          </Typography>
-
-          <Typography sx={(theme) => ({ ...textRed(theme), opacity: 0.85 })}>
-            Tgl.Aktif ≤ Tgl. Sekarang dan P.Akhir ≥ Tgl. Sekarang
-          </Typography>
-
-          <Typography sx={(theme) => ({ ...textBlue(theme), opacity: 0.85 })} mt={1}>
-            Untuk Kontrak Selain PKWT Tgl. Aktif = P.AWAL Kontrak
-          </Typography>
-
-          <Typography sx={(theme) => ({ ...textBlue(theme), opacity: 0.85 })}>
-            Untuk Kontrak PKWT Tgl. Aktif = P.AWAL Kontrak + 3 Bulan
-          </Typography>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Stack spacing={1}>
-            {[
-              { label: "Kontrak Non Aktif", color: "#ef4444" },
-              { label: "Kontrak yang akan Aktif", color: "#f59e0b" },
-              { label: "Kontrak yang sedang Aktif", color: "#22c55e" },
-            ].map((it) => (
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
+          {LEGEND.map((it) => (
+            <Box
+              key={it.label}
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.75,
+                px: 1.1,
+                py: 0.55,
+                borderRadius: 999,
+                fontSize: 11.5,
+                fontWeight: 700,
+                color: "text.secondary",
+                bgcolor: theme.palette.background.paper,
+                border: `1px solid ${borderColor(theme)}`,
+              }}
+            >
               <Box
-                key={it.label}
-                sx={(theme) => ({
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  px: 1.25,
-                  py: 0.85,
-                  borderRadius: 2,
-                  border: `1px solid ${
-                    theme.palette.mode === "dark"
-                      ? alpha("#fff", 0.10)
-                      : alpha("#0f172a", 0.06)
-                  }`,
-                  bgcolor: alpha(it.color, theme.palette.mode === "dark" ? 0.14 : 0.08),
-                })}
-              >
-                <Box
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: 999,
-                    bgcolor: it.color,
-                    boxShadow: `0 6px 16px ${alpha(it.color, 0.22)}`,
-                  }}
-                />
-                <Typography fontSize={12.5} fontWeight={800} sx={{ color: "text.primary" }}>
-                  {it.label}
-                </Typography>
-              </Box>
-            ))}
-          </Stack>
-        </Grid>
-      </Grid>
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor: it.color,
+                }}
+              />
+              {it.label}
+            </Box>
+          ))}
+        </Stack>
+      </Stack>
     </Box>
   );
 }

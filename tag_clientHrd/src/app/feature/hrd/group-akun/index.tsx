@@ -26,7 +26,8 @@ import {
 } from '@mui/material';
 import { IconSearch, IconTrash, IconEdit } from '@tabler/icons-react';
 import CustomCheckbox from '@/app/components/forms/theme-elements/CustomCheckbox';
-import useSWR from 'swr';
+import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR';
 import AccessButton from '@/app/components/buttons/AccessButton';
 import { useSnackbar } from '@/app/context/SnackbarContext';
 import { GroupList } from '@/app/(DashboardLayout)/types/feature/konfigurasi/group';
@@ -50,7 +51,8 @@ const GroupListComponent = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [editingGroup, setEditingGroup] = useState<GroupList | null>(null);
 
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, mutate } = useAccessGatedSWR(
+    { subject: 'HrdGroupAkun', any: true },
     ['hrd-groups', searchTerm, page, pageSize],
     () =>
       fetchGroups({
@@ -60,7 +62,11 @@ const GroupListComponent = () => {
       })
   );
 
-  const { data: accessRoleData } = useSWR('hrd-access-roles', fetchAccessRoles);
+  const { data: accessRoleData } = useAccessGatedSWR(
+    { subject: 'HrdGroupAkun', any: true },
+    'hrd-access-roles',
+    fetchAccessRoles
+  );
 
   const groups: GroupList[] = data?.Data ?? [];
   const totalCount: number = data?.TotalCount ?? 0;
@@ -327,7 +333,7 @@ const GroupListComponent = () => {
         <DialogTitle>Konfirmasi Hapus</DialogTitle>
         <DialogContent>
           <Typography variant="body2" gutterBottom>
-            Role yang dihapus berlaku untuk semua modul (Konfigurasi, HRD, dll.).
+            Hanya role dengan modul HRD yang ditampilkan di halaman ini.
           </Typography>
           Apakah Anda yakin ingin menghapus data yang dipilih?
         </DialogContent>

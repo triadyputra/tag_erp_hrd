@@ -2,8 +2,24 @@
 import { Box, Container, Typography, Button } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
+import { getAuthMenu } from "@/helpers/auth.helper";
 
-const forbidden = () => (
+function firstMenuHref(): string {
+  const menu = getAuthMenu();
+  for (const item of menu) {
+    if (item.href && item.href !== "#" && !item.navlabel) {
+      return item.href;
+    }
+    for (const child of item.children ?? []) {
+      if (child.href && child.href !== "#") return child.href;
+    }
+  }
+  return "/";
+}
+
+const forbidden = () => {
+  const backHref = firstMenuHref();
+  return (
   <Box
     display="flex"
     flexDirection="column"
@@ -27,13 +43,14 @@ const forbidden = () => (
         color="primary"
         variant="contained"
         component={Link}
-        href="/"
+        href={backHref}
         disableElevation
       >
-        Go Back to Home
+        Kembali ke menu
       </Button>
     </Container>
   </Box>
-);
+  );
+};
 
 export default forbidden;

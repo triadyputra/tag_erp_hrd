@@ -49,8 +49,8 @@
     "@types/lodash": "^4.14.199",
     "@types/node": "^20.8.4",
     "@types/react-helmet": "^6.1.7",
-    "eslint": "latest",
-    "eslint-config-next": "latest"
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.0.2"
   },
   "packageManager": "pnpm@9.13.2+sha512.88c9c3864450350e65a33587ab801acf946d7c814ed1134da4a924f6df5a2120fd36b46aab68f7cd1d413149112d53c7db3a4136624cfd00ff1846a0c6cef48a"
 }

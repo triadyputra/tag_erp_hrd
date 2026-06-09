@@ -9,7 +9,9 @@ import Customizer from "./layout/shared/customizer/Customizer";
 import Navigation from "./layout/horizontal/navbar/Navigation";
 import HorizontalHeader from "./layout/horizontal/header/Header";
 import { CustomizerContext } from "@/app/context/customizerContext";
+import { TabWorkspaceProvider } from "@/app/context/tabWorkspaceContext";
 import config from "@/app/context/config";
+import DashboardContent from "./workspace/DashboardContent";
 
 const MainWrapper = styled("div")(() => ({
   display: "flex",
@@ -24,6 +26,8 @@ const PageWrapper = styled("div")(() => ({
   flexDirection: "column",
   zIndex: 1,
   width: "100%",
+  minWidth: 0,
+  maxWidth: "100%",
   backgroundColor: "transparent",
 }));
 
@@ -43,6 +47,7 @@ export default function RootLayout({
   const theme = useTheme();
 
   return (
+    <TabWorkspaceProvider>
     <MainWrapper>
       {/* ------------------------------------------- */}
       {/* Sidebar */}
@@ -71,16 +76,23 @@ export default function RootLayout({
         <Container
           sx={{
             maxWidth: isLayout === "boxed" ? "lg" : "100%!important",
+            width: "100%",
+            minWidth: 0,
           }}
         >
           {/* ------------------------------------------- */}
           {/* PageContent */}
           {/* ------------------------------------------- */}
 
-          <Box sx={{ minHeight: "calc(100vh - 170px)" }}>
-            {/* <Outlet /> */}
-            {children}
-            {/* <Index /> */}
+          <Box
+            sx={{
+              minHeight: "calc(100vh - 170px)",
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+            }}
+          >
+            <DashboardContent>{children}</DashboardContent>
           </Box>
 
           {/* ------------------------------------------- */}
@@ -90,5 +102,6 @@ export default function RootLayout({
         <Customizer />
       </PageWrapper>
     </MainWrapper>
+    </TabWorkspaceProvider>
   );
 }

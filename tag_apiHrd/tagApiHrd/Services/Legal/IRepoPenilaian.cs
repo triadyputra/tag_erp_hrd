@@ -28,11 +28,18 @@ namespace tagApiHrd.Services.Legal
         string? kdCabang,
         DateTime? tglAwal,
         DateTime? tglAkhir,
+        DateTime? pAkhirAwal,
+        DateTime? pAkhirAkhir,
         string? keputusan,
         int page,
         int pageSize);
 
         Task<ApiResponse<object>> UpdateAprovalEvaluasi(
         FormApprovalEvaluasiDto dto);
+
+        Task<List<ViewKontrakMauHabisDto>> GetListKontrakMauHabis(
+            string kdCabang,
+            string bulan,
+            int tahun);
     }
 }

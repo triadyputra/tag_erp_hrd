@@ -30,12 +30,15 @@ interface FormGroupProps {
   onSubmit: (payload: GroupList) => Promise<void>;
 }
 
+const HRD_MODUL = 'HRD';
+
 const emptyGroup: GroupList = {
   Id: '',
   Name: '',
   Access: '',
   Keterangan: '',
   Photo: '',
+  IdModul: HRD_MODUL,
 };
 
 const FormGroup: React.FC<FormGroupProps> = ({
@@ -74,6 +77,7 @@ const FormGroup: React.FC<FormGroupProps> = ({
       Access: groupToEdit.Access ?? '',
       Keterangan: groupToEdit.Keterangan ?? '',
       Photo: groupToEdit.Photo ?? '',
+      IdModul: groupToEdit.IdModul ?? HRD_MODUL,
     });
 
     try {
@@ -122,6 +126,7 @@ const FormGroup: React.FC<FormGroupProps> = ({
 
       const payload: GroupList = {
         ...values,
+        IdModul: HRD_MODUL,
         Access: JSON.stringify(accessList),
       };
 
@@ -138,7 +143,7 @@ const FormGroup: React.FC<FormGroupProps> = ({
     <Dialog open={!!groupToEdit} onClose={onClose} maxWidth="md" fullWidth>
       <DialogHeader
         title={values.Id ? 'Edit Group' : 'Tambah Group'}
-        subtitle="Kelola group dan hak akses modul HRD saja (role dipakai bersama modul lain)"
+        subtitle="Group modul HRD — IdModul otomatis HRD"
         statusLabel={values.Id ? 'EDIT' : 'CREATE'}
         statusColor={values.Id ? 'info' : 'warning'}
       />

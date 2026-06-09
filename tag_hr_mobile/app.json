@@ -1,0 +1,83 @@
+{
+  "expo": {
+    "name": "HR-TAG",
+    "slug": "hr-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/tag_icon_app.png",
+    "scheme": "hrmobile",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+
+    "splash": {
+      "image": "./assets/images/tag_icon_app.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Kamera diperlukan untuk verifikasi wajah saat presensi masuk dan pulang."
+      }
+    },
+
+    "android": {
+      "package": "id.co.tag.hrmobile",
+      "versionCode": 1,
+      "permissions": ["android.permission.CAMERA"],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/tag_icon_adaptive_fg.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+
+    "plugins": [
+      "expo-dev-client",
+      "onnxruntime-react-native",
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "buildToolsVersion": "36.0.0"
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#ffffff",
+          "image": "./assets/images/tag_icon_app.png",
+          "resizeMode": "contain"
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "./plugins/with-android-release-signing.js",
+      "./plugins/with-onnxruntime-package.js"
+    ],
+
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+
+    "extra": {
+      "router": {},
+      "androidUpdateViaStore": true,
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=id.co.tag.hrmobile",
+      "eas": {
+        "projectId": "0da33b16-408a-4d7e-9fa3-ff1056fb0e42"
+      }
+    }
+  }
+}

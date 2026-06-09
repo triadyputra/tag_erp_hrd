@@ -16,8 +16,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { loginType } from '@/app/(DashboardLayout)/types/auth/auth'
 import CustomTextField from '@/app/components/forms/theme-elements/CustomTextField'
 import CustomFormLabel from '@/app/components/forms/theme-elements/CustomFormLabel'
-import { login } from '@/services/auth.service'
+import { login, getMe } from '@/services/auth.service'
 import { setAuthToken } from '@/helpers/token.helper'
+import { setAuthMenu } from '@/helpers/auth.helper'
 import { IconEye, IconEyeOff } from '@tabler/icons-react'
 
 const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
@@ -54,6 +55,11 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
         res.refreshToken,
         res.expiresIn
       )
+
+      const me = await getMe()
+      localStorage.setItem('auth_user', JSON.stringify(me.user))
+      localStorage.setItem('auth_access', JSON.stringify(me.acces))
+      setAuthMenu(me.Menu ?? [])
 
       window.location.replace(next)
     } catch (err: unknown) {

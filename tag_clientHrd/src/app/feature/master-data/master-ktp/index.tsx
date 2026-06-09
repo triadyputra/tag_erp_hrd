@@ -24,7 +24,7 @@ import {
   DialogActions,
 } from '@mui/material'
 import { IconEdit, IconId, IconSearch, IconTrash } from '@tabler/icons-react'
-import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR'
 import { useComboCabangWith } from '@/hooks/useComboGroup'
 import { deleteMasterKtp, fetchMasterKtp, saveMasterKtp } from '@/services/master-data/master-ktp.service'
 import DialogUpdateNomorKtp from './DialogUpdateNomorKtp'
@@ -63,7 +63,8 @@ const MasterKtpListComponent = () => {
   const [openUpdateNomorDialog, setOpenUpdateNomorDialog] = useState(false)
   const [selectedUpdateNomor, setSelectedUpdateNomor] = useState<any>(null)
   
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, mutate } = useAccessGatedSWR(
+    { subject: 'MasterKtp', any: true },
     ['master-ktp', filterNoktp, filterNama, filterCabang, page, pageSize],
     () =>
       fetchMasterKtp({

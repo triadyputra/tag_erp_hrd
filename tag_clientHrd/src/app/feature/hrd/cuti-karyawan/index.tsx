@@ -25,7 +25,7 @@ import {
 	DialogActions,
 } from '@mui/material'
 import { IconEdit, IconSearch, IconTrash } from '@tabler/icons-react'
-import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR'
 import { useComboCabangWith } from '@/hooks/useComboGroup'
 import { deleteCutiKaryawan, fetchCutiKaryawan, saveCutiKaryawan } from '@/services/hrd/cuti-karyawan.service'
 import { formatDate } from '@/utils/format'
@@ -70,7 +70,8 @@ const CutiKaryawanListComponent = () => {
 	const [loadingDelete, setLoadingDelete] = useState(false);
 	
   // ================= FETCH =================
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, mutate } = useAccessGatedSWR(
+    { subject: 'CutiKaryawan', any: true },
     ['cuti', filterNama, filterCabang, filterTglAwal, filterTglAkhir, page, pageSize],
     () =>
       fetchCutiKaryawan({

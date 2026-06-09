@@ -29,6 +29,7 @@ export interface UserInfo {
   username: string
   avatar?: string
   cabang?: string
+  niksistag?: string
   group: string[]
   role: string
 }

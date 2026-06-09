@@ -8,6 +8,7 @@ import {
   Typography,
   Box,
   useTheme,
+  TableContainer,
 } from "@mui/material";
 import { rowHover, tableStyle } from "./karyawanStyles";
 
@@ -18,7 +19,11 @@ function formatDate(val?: string) {
 export default function SPTable({ data = [] }: { data: any[] }) {
   const theme = useTheme();
   return (
-    <Paper sx={tableStyle}>
+    <TableContainer
+      component={Paper}
+      elevation={0}
+      sx={{ ...tableStyle(theme), overflowX: "auto" }}
+    >
       <Table size="small">
         <TableHead>
           <TableRow
@@ -55,6 +60,10 @@ export default function SPTable({ data = [] }: { data: any[] }) {
                     borderColor: "divider",
                     py: 1.25,
                     fontSize: 12.5,
+                    verticalAlign: "top",
+                  },
+                  "&:last-child td": {
+                    borderBottom: "none",
                   },
                 }}
               >
@@ -90,6 +99,6 @@ export default function SPTable({ data = [] }: { data: any[] }) {
           )}
         </TableBody>
       </Table>
-    </Paper>
+    </TableContainer>
   );
 }

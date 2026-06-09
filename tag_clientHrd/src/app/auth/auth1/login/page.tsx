@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography'
 import PageContainer from '@/app/components/container/PageContainer'
 import Logo from '@/app/(DashboardLayout)/layout/shared/logo/Logo'
 import AuthLogin from '../../authForms/AuthLogin'
+import LoginApiStatus from '../../authForms/LoginApiStatus'
 import Image from 'next/image'
 
 export default function Login() {
@@ -100,6 +101,8 @@ export default function Login() {
                 <Typography variant="caption" color="textSecondary" textAlign="center">
                   © {new Date().getFullYear()} TAG. All rights reserved.
                 </Typography>
+
+                <LoginApiStatus />
               </Stack>
             </Card>
           </Box>

@@ -18,6 +18,14 @@ const KEPUTUSAN_OPTIONS = [
   { label: 'TIDAK PERPANJANG', value: 'TIDAK PERPANJANG' },
 ] as const
 
+function pickRowStaff(row: AprovalEvaluasiRow | null) {
+  const r = row as Record<string, unknown> | null
+  const nik = String(row?.NikHrdStaff ?? r?.nikHrdStaff ?? '').trim()
+  const nama = String(row?.NmHrdStaff ?? r?.nmHrdStaff ?? '').trim()
+  const validUser = String(row?.ValidUser ?? r?.validUser ?? '').trim()
+  return { nik, nama, validUser, hasStaff: Boolean(nik && nama) }
+}
+
 type Props = {
   open: boolean
   row: AprovalEvaluasiRow | null
@@ -31,7 +39,7 @@ export default function FormAprovalEvaluasi({ open, row, onClose, onSubmit }: Pr
   const user = getAuthUser()
   const defaultStaff = useMemo(
     () => ({
-      NikHrdStaff: user?.username ?? '',
+      NikHrdStaff: user?.niksistag ?? '',
       NmHrdStaff: user?.fullName ?? '',
       ValidUser: user?.username ?? '',
     }),
@@ -59,19 +67,28 @@ export default function FormAprovalEvaluasi({ open, row, onClose, onSubmit }: Pr
   useEffect(() => {
     if (!open) return
 
+    const existing = pickRowStaff(row)
+    const staff = existing.hasStaff
+      ? {
+          NikHrdStaff: existing.nik,
+          NmHrdStaff: existing.nama,
+          ValidUser: existing.validUser || defaultStaff.ValidUser,
+        }
+      : defaultStaff
+
     setErrors({})
     setStaffList([])
     setShowStaffDropdown(false)
     setValues({
       NoTran: row?.NoTran ?? '',
       CatatanHrd: row?.CatatanHrd ?? '',
-      NikHrdStaff: defaultStaff.NikHrdStaff,
-      NmHrdStaff: defaultStaff.NmHrdStaff,
+      NikHrdStaff: staff.NikHrdStaff,
+      NmHrdStaff: staff.NmHrdStaff,
       Keputusan: (row?.Keputusan?.trim() ? String(row?.Keputusan).toUpperCase() : 'MENUNGGU') as any,
-      ValidUser: defaultStaff.ValidUser,
+      ValidUser: staff.ValidUser,
     })
-    setStaffKeyword(defaultStaff.NmHrdStaff ?? '')
-  }, [open, row?.NoTran, row?.CatatanHrd, row?.Keputusan, defaultStaff.NikHrdStaff, defaultStaff.NmHrdStaff, defaultStaff.ValidUser])
+    setStaffKeyword(staff.NmHrdStaff ?? '')
+  }, [open, row, defaultStaff])
 
   useEffect(() => {
     if (!showStaffDropdown) return
@@ -128,6 +145,7 @@ export default function FormAprovalEvaluasi({ open, row, onClose, onSubmit }: Pr
         throw new Error('NIK staf HRD tidak ditemukan')
       }
 
+      
       setValues((prev) => ({
         ...prev,
         NmHrdStaff: nama,

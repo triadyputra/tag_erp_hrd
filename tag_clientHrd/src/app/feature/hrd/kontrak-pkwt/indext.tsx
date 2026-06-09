@@ -27,7 +27,7 @@ import {
   Badge,
 } from '@mui/material'
 import { IconCircleCheck, IconEdit, IconFilter, IconSearch, IconTrash } from '@tabler/icons-react'
-import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR'
 import { useComboCabangWith, useComboVendorByNama } from '@/hooks/useComboGroup'
 import { approveKontrakPkwt, deleteKontrakPkwt, fetchKontrakPkwt, saveKontrakPkwt } from '@/services/hrd/kontrak-pkwt.service'
 import { formatDate } from '@/utils/format'
@@ -87,7 +87,8 @@ const KontrakPkwtListComponent = () => {
     return Number.isNaN(n) ? null : n
   }
 
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, mutate } = useAccessGatedSWR(
+    { subject: 'KontrakPkwt', any: true },
     ['pkwt', filterNama, filterCabang, filterPerusahaan, filterStatusTtd, filterTglAwal, filterTglAkhir, page, pageSize],
     () =>
       fetchKontrakPkwt({

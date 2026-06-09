@@ -20,7 +20,7 @@ import {
   Avatar,
 } from '@mui/material'
 import { IconEye, IconSearch } from '@tabler/icons-react'
-import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR'
 import { useComboCabangWith } from '@/hooks/useComboGroup'
 import { getCabang } from '@/helpers/auth.helper'
 import { fetchKaryawanTetapList } from '@/services/hrd/karyawan-tetap.service'
@@ -60,7 +60,8 @@ const KaryawanTetapListComponent = () => {
   const [openDetail, setOpenDetail] = useState(false)
   const [selectedNoktp, setSelectedNoktp] = useState<string | null>(null)
 
-  const { data, isLoading } = useSWR(
+  const { data, isLoading } = useAccessGatedSWR(
+    { subject: 'KaryawanTetap', any: true },
     ['karyawan-tetap', filterNoktp, filterNama, filterCabang, page, pageSize],
     () =>
       fetchKaryawanTetapList({

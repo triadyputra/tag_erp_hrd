@@ -15,6 +15,7 @@
         public string? NmBagian { get; set; }
         public string? NmJabatan { get; set; }
 
+        public DateTime? TglNilai { get; set; }
         public DateTime? TglMasuk { get; set; }
 
         public DateTime? PAwal { get; set; }
@@ -28,6 +29,9 @@
         public string? NmAtasan { get; set; }
 
         public string? CatatanHrd { get; set; }
+        public string? NikHrdStaff { get; set; }
+        public string? NmHrdStaff { get; set; }
+        public string? ValidUser { get; set; }
         public string? Keputusan { get; set; }
     }
 }

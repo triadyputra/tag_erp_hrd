@@ -42,6 +42,8 @@ namespace tagApiHrd.Controllers.monitoring
             string? cabang,
             DateTime? tglAwal,
             DateTime? tglAkhir,
+            DateTime? pAkhirAwal,
+            DateTime? pAkhirAkhir,
             string? keputusan,
             int page = 1,
             int pageSize = 10)
@@ -51,6 +53,16 @@ namespace tagApiHrd.Controllers.monitoring
                 if (page < 1) page = 1;
                 if (pageSize < 1 || pageSize > 100) pageSize = 10;
 
+                if (pAkhirAwal.HasValue && pAkhirAkhir.HasValue && pAkhirAwal.Value.Date > pAkhirAkhir.Value.Date)
+                {
+                    return BadRequest(
+                        ApiResponse<object>.Error(
+                            "PAkhir awal tidak boleh lebih besar dari PAkhir akhir",
+                            "400"
+                        )
+                    );
+                }
+
                 var finalCabang = await _comboRepository.GetCabangAsync(cabang);
 
                 var result = await _repo.AprovalEvaluasi(
@@ -58,6 +70,8 @@ namespace tagApiHrd.Controllers.monitoring
                     finalCabang,
                     tglAwal,
                     tglAkhir,
+                    pAkhirAwal,
+                    pAkhirAkhir,
                     keputusan,
                     page,
                     pageSize

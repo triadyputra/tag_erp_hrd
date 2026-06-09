@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useContext } from "react";
-import { usePathname } from "next/navigation";
+import { useTabWorkspace } from "@/app/context/tabWorkspaceContext";
 import Box from "@mui/material/Box";
 import List from "@mui/material/List";
 import Skeleton from "@mui/material/Skeleton";
@@ -22,11 +22,10 @@ import { iconMap } from "@/utils/iconMap";
  * - Aman untuk next export (full static)
  */
 const SidebarItems = () => {
-  const pathname = usePathname();
-  const pathDirect = pathname;
-  const pathWithoutLastPart = pathname.slice(
+  const { pathDirect } = useTabWorkspace();
+  const pathWithoutLastPart = pathDirect.slice(
     0,
-    pathname.lastIndexOf("/")
+    pathDirect.lastIndexOf("/")
   );
 
   const {
@@ -79,7 +78,8 @@ const SidebarItems = () => {
   const normalizeMenu = (items: any[]): any[] =>
     items.map((item) => ({
       ...item,
-
+      iconKey:
+        typeof item.icon === "string" ? item.icon : item.iconKey,
       icon:
         typeof item.icon === "string" && iconMap[item.icon]
           ? iconMap[item.icon]

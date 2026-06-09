@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useContext, useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { useTabWorkspace } from '@/app/context/tabWorkspaceContext';
 
 import Collapse from '@mui/material/Collapse';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -34,7 +34,7 @@ export default function NavCollapse({
   onClick,
 }: NavCollapseProps) {
   const theme = useTheme();
-  const pathname = usePathname();
+  const { pathDirect: activePath } = useTabWorkspace();
   const lgDown = useMediaQuery((theme: Theme) =>
     theme.breakpoints.down('lg')
   );
@@ -51,11 +51,14 @@ export default function NavCollapse({
   useEffect(() => {
     setOpen(false);
     menu.children?.forEach((item: any) => {
-      if (pathname.startsWith(item.href)) {
+      if (
+        item.href &&
+        (activePath === item.href || activePath.startsWith(item.href + '/'))
+      ) {
         setOpen(true);
       }
     });
-  }, [pathname, menu.children]);
+  }, [activePath, menu.children]);
 
   const ListItemStyled = styled(ListItemButton)(() => ({
     display: 'flex',

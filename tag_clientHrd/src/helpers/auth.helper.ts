@@ -25,6 +25,24 @@ export function getCabang(): string | null {
   return getAuthUser()?.cabang ?? null
 }
 
+// ---------- NIK SISTEM ----------
+export function getNikSistag(): string | null {
+  if (!isBrowser()) return null
+
+  return getAuthUser()?.niksistag?.trim() || null
+}
+
+/** Kode cabang (KDCABANG) untuk filter API — sama seperti filter di halaman HRD. */
+export function getCabangFilter(): string {
+  const cab = getCabang()
+  return cab?.trim() ?? ''
+}
+
+/** User terkunci ke satu cabang (bukan pusat / semua cabang). */
+export function isCabangScopeLocked(): boolean {
+  return getCabangFilter().length > 0
+}
+
 // ---------- ROLE ----------
 export function hasRole(role: string): boolean {
   if (!isBrowser()) return false

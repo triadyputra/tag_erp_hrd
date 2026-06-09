@@ -1,5 +1,7 @@
 import React, { useContext } from "react";
 import Link from "next/link";
+import { useTabWorkspace } from "@/app/context/tabWorkspaceContext";
+import { isWorkspaceRoute } from "@/app/(DashboardLayout)/workspace/routeRegistry";
 
 // mui imports
 import Chip from '@mui/material/Chip';
@@ -53,6 +55,8 @@ export default function NavItem({
   const Icon = item?.icon;
   const theme = useTheme();
   const { t } = useTranslation();
+  const { openTab } = useTabWorkspace();
+  const workspaceRoute = isWorkspaceRoute(item?.href);
   const itemIcon =
     level > 1 ? (
       <Icon stroke={1.5} size="1rem" />
@@ -85,25 +89,19 @@ export default function NavItem({
     },
   }));
 
-  const listItemProps: {
-    component: any;
-    href?: string;
-    target?: any;
-    to?: any;
-  } = {
-    component: item?.external ? "a" : Link,
-    to: item?.href,
-    href: item?.external ? item?.href : "",
-    target: item?.external ? "_blank" : "",
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+    if (workspaceRoute && item?.href) {
+      e.preventDefault();
+      openTab(item.href, t(`${item.title}`));
+    }
+    if (lgDown) onClick(e);
   };
 
-  return (
-    <List component="li" disablePadding key={item?.id && item.title}>
-      <Link href={item.href}>
+  const listContent = (
         <ListItemStyled
           disabled={item?.disabled}
           selected={pathDirect === item?.href}
-          onClick={lgDown ? onClick : undefined}
+          onClick={handleClick}
         >
           <ListItemIcon
             sx={{
@@ -130,7 +128,17 @@ export default function NavItem({
           </ListItemText>
 
         </ListItemStyled>
-      </Link>
+  );
+
+  return (
+    <List component="li" disablePadding key={item?.id && item.title}>
+      {workspaceRoute ? (
+        listContent
+      ) : (
+        <Link href={item.href ?? "#"} style={{ textDecoration: "none" }}>
+          {listContent}
+        </Link>
+      )}
     </List>
   );
 }

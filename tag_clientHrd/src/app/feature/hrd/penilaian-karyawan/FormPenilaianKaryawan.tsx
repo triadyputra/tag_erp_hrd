@@ -34,12 +34,14 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 import type { Dayjs } from 'dayjs'
-import { IconChevronDown, IconDeviceFloppy } from '@tabler/icons-react'
+import { IconCalendarDue, IconChevronDown, IconDeviceFloppy } from '@tabler/icons-react'
 import { useSnackbar } from '@/app/context/SnackbarContext'
 import {
   fetchAspekPenilaian,
   fetchDetailPenilaianKaryawan,
+  fetchListKontrakMauHabis,
   FormEvaluasiKontrakPayload,
+  KontrakMauHabisRow,
   ViewAspekPenilaianDto,
 } from '@/services/hrd/penilaian-karyawan.service'
 import {
@@ -105,6 +107,38 @@ function buildAspectBlocks(rows: AspekPenilaianRow[]): {
     const title = nmGrp?.trim() ? nmGrp.trim() : `Grup ${key}`
     return { key, title, rows: rs }
   })
+}
+
+const BULAN_INDONESIA = [
+  'JANUARI',
+  'FEBRUARI',
+  'MARET',
+  'APRIL',
+  'MEI',
+  'JUNI',
+  'JULI',
+  'AGUSTUS',
+  'SEPTEMBER',
+  'OKTOBER',
+  'NOVEMBER',
+  'DESEMBER',
+] as const
+
+function bulanIndonesiaUpper(d = dayjs()): string {
+  return BULAN_INDONESIA[d.month()] ?? BULAN_INDONESIA[dayjs().month()]
+}
+
+function mapKontrakMauHabisRow(raw: KontrakMauHabisRow | Record<string, unknown>) {
+  const r = raw as Record<string, unknown>
+  return {
+    noKtp: String(r.NoKtp ?? r.noKtp ?? '').trim(),
+    nikSistag: String(r.NikSistag ?? r.nikSistag ?? '').trim(),
+    nmKaryawan: String(r.NmKaryawan ?? r.nmKaryawan ?? '').trim(),
+    kelamin: String(r.Kelamin ?? r.kelamin ?? '').trim(),
+    nmDivisi: String(r.NmDivisi ?? r.nmDivisi ?? '').trim(),
+    nmBagian: String(r.NmBagian ?? r.nmBagian ?? '').trim(),
+    nmJabatan: String(r.NmJabatan ?? r.nmJabatan ?? '').trim(),
+  }
 }
 
 const REKOMENDASI_OPTIONS = [
@@ -307,7 +341,7 @@ const FormPenilaianKaryawan: React.FC<Props> = ({ noTran, onClose, onSubmit }) =
   const { data: jabatanOptions, loading: loadingJabatan } = useComboJabatan()
   const [aspekRows, setAspekRows] = useState<AspekPenilaianRow[]>([])
   const [scores, setScores] = useState<Record<string, number>>({})
-  const [loadingAspek, setLoadingAspek] = useState(false)
+  const [loadingAspek, setLoadingAspek] = useState(true)
   const [loading, setLoading] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -325,9 +359,76 @@ const FormPenilaianKaryawan: React.FC<Props> = ({ noTran, onClose, onSubmit }) =
   const [loadingAtasanSelect, setLoadingAtasanSelect] = useState(false)
   const [showAtasanDropdown, setShowAtasanDropdown] = useState(false)
 
+  const [userCabang, setUserCabang] = useState<string | null>(null)
+  const [openKontrakDialog, setOpenKontrakDialog] = useState(false)
+  const [kontrakList, setKontrakList] = useState<ReturnType<typeof mapKontrakMauHabisRow>[]>([])
+  const [loadingKontrakList, setLoadingKontrakList] = useState(false)
+  const [filterBulan, setFilterBulan] = useState(() => bulanIndonesiaUpper())
+  const [filterTahun, setFilterTahun] = useState(() => dayjs().year())
+  const [filterKontrakCabang, setFilterKontrakCabang] = useState('')
+
+  const resolveKontrakCabang = (cabangOverride?: string | null) => {
+    const cab = (cabangOverride ?? filterKontrakCabang ?? userCabang ?? '').trim()
+    return cab || null
+  }
+
+  const loadKontrakMauHabis = async (
+    bulan: string,
+    tahun: number,
+    options?: { cabang?: string | null; showCabangWarning?: boolean }
+  ) => {
+    const cab = resolveKontrakCabang(options?.cabang)
+    if (!cab) {
+      setKontrakList([])
+      setLoadingKontrakList(false)
+      if (options?.showCabangWarning) {
+        showSnackbar('Pilih cabang terlebih dahulu', 'warning')
+      }
+      return
+    }
+
+    setLoadingKontrakList(true)
+    try {
+      const raw = await fetchListKontrakMauHabis({ cabang: cab, bulan, tahun })
+      setKontrakList(raw.map((row) => mapKontrakMauHabisRow(row)))
+    } catch (err: any) {
+      showSnackbar(err?.message || 'Gagal memuat daftar kontrak mau habis', 'error')
+      setKontrakList([])
+    } finally {
+      setLoadingKontrakList(false)
+    }
+  }
+
+  const handleOpenKontrakDialog = () => {
+    const bulan = bulanIndonesiaUpper()
+    const tahun = dayjs().year()
+    const cab = userCabang?.trim() || values.KdCabang?.trim() || ''
+    setFilterBulan(bulan)
+    setFilterTahun(tahun)
+    setFilterKontrakCabang(cab)
+    setOpenKontrakDialog(true)
+    if (cab) {
+      void loadKontrakMauHabis(bulan, tahun, { cabang: cab })
+    } else {
+      setKontrakList([])
+      setLoadingKontrakList(false)
+    }
+  }
+
+  const handlePickKontrakRow = async (row: ReturnType<typeof mapKontrakMauHabisRow>) => {
+    if (isEdit) return
+    if (!row.noKtp) {
+      showSnackbar('No KTP tidak tersedia', 'warning')
+      return
+    }
+    setOpenKontrakDialog(false)
+    await handleSelect({ NOKTP: row.noKtp, NAMALENGKAP: row.nmKaryawan })
+  }
+
   useEffect(() => {
     const cab = getCabang()
     if (cab && cab.trim() !== '') {
+      setUserCabang(cab.trim())
       setValues((prev) => ({ ...prev, KdCabang: cab }))
     }
   }, [])
@@ -530,11 +631,11 @@ const FormPenilaianKaryawan: React.FC<Props> = ({ noTran, onClose, onSubmit }) =
 
       const raw = await getDetailPegawaiWithKontrakNik(nikSistem)
       const k: any = raw?.Data ?? raw
-
+      //console.log(k)
       const tgllRaw = k.TglLahir ?? k.tglLahir
       const tgll = tgllRaw ? dayjs(tgllRaw) : null
 
-      const tglMasukSrc = k.BeginDate ?? k.beginDate ?? k.Tmt ?? k.tmt
+      const tglMasukSrc = k.Tmt ?? k.tmt
       const tglHabisSrc = k.PAkhir ?? k.pAkhir ?? k.EndDate ?? k.endDate
       const pAwalSrc = k.PAwal ?? k.pAwal
       const pAkhirSrc = k.PAkhir ?? k.pAkhir
@@ -744,7 +845,26 @@ const FormPenilaianKaryawan: React.FC<Props> = ({ noTran, onClose, onSubmit }) =
         <DialogContent sx={{ position: 'relative', pt: 2 }}>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, lg: 5 }}>
-              <SectionTitle title="Data Karyawan" subtitle="Identitas pegawai dan kontrak kerja" />
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                alignItems={{ xs: 'stretch', sm: 'flex-start' }}
+                justifyContent="space-between"
+                spacing={1}
+                sx={{ mb: 0.5 }}
+              >
+                <SectionTitle title="Data Karyawan" subtitle="Identitas pegawai dan kontrak kerja" />
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<IconCalendarDue size={16} />}
+                  onClick={handleOpenKontrakDialog}
+                  disabled={loadingAspek || loadingDetail || loading}
+                  sx={{ flexShrink: 0, alignSelf: { sm: 'center' } }}
+                >
+                  Kontrak Mau Habis
+                </Button>
+              </Stack>
               <Stack spacing={1.25}>
                 <TextField
                   fullWidth
@@ -1701,6 +1821,171 @@ const FormPenilaianKaryawan: React.FC<Props> = ({ noTran, onClose, onSubmit }) =
           </Button>
         </DialogActions>
       </form>
+
+      <Dialog
+        open={openKontrakDialog}
+        onClose={() => setOpenKontrakDialog(false)}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{ sx: { maxHeight: '90vh' } }}
+      >
+        <DialogHeader
+          title="Kontrak Mau Habis"
+          subtitle="Karyawan dengan periode akhir kontrak pada bulan terpilih"
+          statusLabel="REFERENSI"
+          statusColor="warning"
+          onClose={() => setOpenKontrakDialog(false)}
+        />
+        <Divider />
+        <DialogContent sx={{ pt: 2 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }} flexWrap="wrap">
+            {userCabang ? (
+              <Autocomplete
+                options={cabangOptions ?? []}
+                loading={cabangLoading}
+                disabled
+                getOptionLabel={(o) => o.title ?? ''}
+                value={cabangOptions?.find((x) => x.value === filterKontrakCabang) ?? null}
+                isOptionEqualToValue={(o, v) => o.value === v.value}
+                sx={{ minWidth: { xs: '100%', sm: 220 }, ...inputCompactStyle }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    size="small"
+                    label="Cabang"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                )}
+              />
+            ) : (
+              <Autocomplete
+                options={cabangOptions ?? []}
+                loading={cabangLoading}
+                getOptionLabel={(o) => o.title ?? ''}
+                value={cabangOptions?.find((x) => x.value === filterKontrakCabang) ?? null}
+                onChange={(_, v) => {
+                  const val = v?.value ?? ''
+                  setFilterKontrakCabang(val)
+                }}
+                isOptionEqualToValue={(o, v) => o.value === v.value}
+                sx={{ minWidth: { xs: '100%', sm: 220 }, ...inputCompactStyle }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    size="small"
+                    label="Cabang"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                )}
+              />
+            )}
+            <TextField
+              select
+              size="small"
+              label="Bulan"
+              value={filterBulan}
+              onChange={(e) => setFilterBulan(e.target.value)}
+              sx={{ minWidth: 160, ...inputCompactStyle }}
+              InputLabelProps={{ shrink: true }}
+            >
+              {BULAN_INDONESIA.map((b) => (
+                <MenuItem key={b} value={b}>
+                  {b.charAt(0) + b.slice(1).toLowerCase()}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              size="small"
+              type="number"
+              label="Tahun"
+              value={filterTahun}
+              onChange={(e) => setFilterTahun(Number(e.target.value) || dayjs().year())}
+              sx={{ width: 120, ...inputCompactStyle }}
+              InputLabelProps={{ shrink: true }}
+            />
+            <Button
+              variant="contained"
+              size="small"
+              disabled={loadingKontrakList || !filterKontrakCabang}
+              onClick={() =>
+                void loadKontrakMauHabis(filterBulan, filterTahun, { showCabangWarning: true })
+              }
+              sx={{ alignSelf: { sm: 'center' } }}
+            >
+              {loadingKontrakList ? 'Memuat...' : 'Muat Ulang'}
+            </Button>
+          </Stack>
+
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>NIK</TableCell>
+                  <TableCell>Nama Karyawan</TableCell>
+                  <TableCell>Kelamin</TableCell>
+                  <TableCell>Divisi</TableCell>
+                  <TableCell>Bagian</TableCell>
+                  <TableCell>Jabatan</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loadingKontrakList ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                      <CircularProgress size={24} />
+                    </TableCell>
+                  </TableRow>
+                ) : kontrakList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Tidak ada data untuk {filterBulan} {filterTahun}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  kontrakList.map((row, idx) => (
+                    <TableRow
+                      key={`${row.noKtp}-${row.nikSistag}-${idx}`}
+                      hover
+                      onClick={() => void handlePickKontrakRow(row)}
+                      sx={{
+                        cursor: isEdit ? 'default' : 'pointer',
+                        '&:hover': isEdit ? undefined : { bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <TableCell>{row.nikSistag || '-'}</TableCell>
+                      <TableCell>
+                        <Typography fontWeight={600} fontSize={13}>
+                          {row.nmKaryawan || '-'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {row.noKtp || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{row.kelamin || '-'}</TableCell>
+                      <TableCell>{row.nmDivisi || '-'}</TableCell>
+                      <TableCell>{row.nmBagian || '-'}</TableCell>
+                      <TableCell>{row.nmJabatan || '-'}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {!isEdit && kontrakList.length > 0 && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+              Klik baris untuk memilih karyawan ke form penilaian.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button variant="outlined" onClick={() => setOpenKontrakDialog(false)}>
+            Tutup
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   )
 }

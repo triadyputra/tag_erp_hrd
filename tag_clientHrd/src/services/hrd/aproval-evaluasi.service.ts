@@ -10,6 +10,8 @@ export interface FetchAprovalEvaluasiParams {
   cabang?: string
   tglAwal?: string
   tglAkhir?: string
+  pAkhirAwal?: string
+  pAkhirAkhir?: string
   keputusan?: string
   page: number
   pageSize: number
@@ -34,6 +36,9 @@ export interface AprovalEvaluasiRow {
   Catatan?: string
   NmAtasan?: string
   CatatanHrd?: string
+  NikHrdStaff?: string
+  NmHrdStaff?: string
+  ValidUser?: string
   Keputusan?: string
 }
 
@@ -43,6 +48,8 @@ export async function fetchAprovalEvaluasiList(params: FetchAprovalEvaluasiParam
     cabang: params.cabang ?? '',
     tglAwal: params.tglAwal ?? '',
     tglAkhir: params.tglAkhir ?? '',
+    pAkhirAwal: params.pAkhirAwal ?? '',
+    pAkhirAkhir: params.pAkhirAkhir ?? '',
     keputusan: params.keputusan ?? '',
     page: params.page.toString(),
     pageSize: params.pageSize.toString(),

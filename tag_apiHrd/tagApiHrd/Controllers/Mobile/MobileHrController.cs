@@ -363,13 +363,13 @@ namespace tagApiHrd.Controllers.Mobile
                         ));
                     }
 
-                    if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
-                    {
-                        return BadRequest(ApiResponse<object>.Error(
-                            $"Tanggal {date:dd MMM yyyy} jatuh pada weekend (tidak diperbolehkan)",
-                            "400"
-                        ));
-                    }
+                    //if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                    //{
+                    //    return BadRequest(ApiResponse<object>.Error(
+                    //        $"Tanggal {date:dd MMM yyyy} jatuh pada weekend (tidak diperbolehkan)",
+                    //        "400"
+                    //    ));
+                    //}
                 }
 
                 // =========================

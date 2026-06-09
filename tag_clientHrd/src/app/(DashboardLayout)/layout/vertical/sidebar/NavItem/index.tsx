@@ -15,6 +15,8 @@ import { Theme } from '@mui/material/styles';
 
 import { useTranslation } from 'react-i18next';
 import { CustomizerContext } from '@/app/context/customizerContext';
+import { useTabWorkspace } from '@/app/context/tabWorkspaceContext';
+import { isWorkspaceRoute } from '@/app/(DashboardLayout)/workspace/routeRegistry';
 
 interface ItemType {
   item: any;
@@ -37,10 +39,11 @@ export default function NavItem({
   );
   const { isBorderRadius } = useContext(CustomizerContext);
   const { t } = useTranslation();
+  const { openTab } = useTabWorkspace();
 
   const Icon = item.icon;
+  const workspaceRoute = isWorkspaceRoute(item.href);
 
-  // ✅ ACTIVE LOGIC MODERNIZE
   const isActive =
     pathDirect === item.href ||
     pathDirect.startsWith(item.href + '/');
@@ -53,7 +56,6 @@ export default function NavItem({
     paddingTop: 8,
     paddingBottom: 8,
 
-    // 🔑 INI KUNCI ALIGNMENT
     paddingLeft: hideMenu
       ? 12
       : level === 1
@@ -71,7 +73,7 @@ export default function NavItem({
       : theme.palette.text.secondary,
 
     '& .nav-icon': {
-      minWidth: 'unset', // ❗ WAJIB
+      minWidth: 'unset',
       width: 28,
       height: 28,
       display: 'flex',
@@ -112,47 +114,55 @@ export default function NavItem({
     },
   }));
 
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+    if (workspaceRoute) {
+      e.preventDefault();
+      openTab(item.href, t(item.title), item.iconKey);
+    }
+    if (lgDown) onClick(e);
+  };
+
+  const listItem = (
+    <ListItemStyled
+      selected={isActive}
+      onClick={handleClick}
+    >
+      <ListItemIcon className="nav-icon" sx={{}}>
+        <Icon size={18} stroke={1.5} />
+      </ListItemIcon>
+
+      {!hideMenu && (
+        <ListItemText
+          primary={t(item.title)}
+          secondary={
+            item.subtitle ? (
+              <Typography variant="caption">
+                {item.subtitle}
+              </Typography>
+            ) : null
+          }
+        />
+      )}
+
+      {!hideMenu && item.chip && (
+        <Chip
+          size="small"
+          label={item.chip}
+          color={item.chipColor || 'primary'}
+        />
+      )}
+    </ListItemStyled>
+  );
+
   return (
     <List component="li" disablePadding>
-      <Link href={item.href} style={{ textDecoration: 'none' }}>
-        <ListItemStyled
-          selected={isActive}
-          onClick={lgDown ? onClick : undefined}
-        >
-          {/* ICON */}
-          <ListItemIcon
-            className="nav-icon"
-            sx={{
-              // styles handled by ListItemStyled (.nav-icon)
-            }}
-          >
-            <Icon size={18} stroke={1.5} />
-          </ListItemIcon>
-
-          {/* TEXT */}
-          {!hideMenu && (
-            <ListItemText
-              primary={t(item.title)}
-              secondary={
-                item.subtitle ? (
-                  <Typography variant="caption">
-                    {item.subtitle}
-                  </Typography>
-                ) : null
-              }
-            />
-          )}
-
-          {/* CHIP */}
-          {!hideMenu && item.chip && (
-            <Chip
-              size="small"
-              label={item.chip}
-              color={item.chipColor || 'primary'}
-            />
-          )}
-        </ListItemStyled>
-      </Link>
+      {workspaceRoute ? (
+        listItem
+      ) : (
+        <Link href={item.href ?? '#'} style={{ textDecoration: 'none' }}>
+          {listItem}
+        </Link>
+      )}
     </List>
   );
 }

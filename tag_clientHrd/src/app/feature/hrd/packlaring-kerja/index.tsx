@@ -26,7 +26,7 @@ import {
   DialogActions,
 } from '@mui/material'
 import { IconEdit, IconSearch, IconTrash } from '@tabler/icons-react'
-import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR'
 import { useComboCabangWith } from '@/hooks/useComboGroup'
 import { getCabang } from '@/helpers/auth.helper'
 import { deletePacklaring, fetchPacklaringList, savePacklaring } from '@/services/hrd/packlaring.service'
@@ -83,7 +83,8 @@ const PacklaringListComponent = () => {
     []
   )
 
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, mutate } = useAccessGatedSWR(
+    { subject: 'Packlaring', any: true },
     [
       'packlaring',
       filterNomor,

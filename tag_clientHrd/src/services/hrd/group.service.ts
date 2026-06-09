@@ -23,6 +23,7 @@ interface FetchGroupParams {
 export async function fetchGroups(params: FetchGroupParams) {
   const query = new URLSearchParams({
     filter: params.filter ?? '',
+    idModul: 'HRD',
     page: params.page.toString(),
     pageSize: params.pageSize.toString(),
   }).toString();

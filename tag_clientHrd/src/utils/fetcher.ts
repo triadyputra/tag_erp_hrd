@@ -129,11 +129,6 @@ export async function authFetch(
     }
   }
 
-  // 🚫 FORBIDDEN → redirect
-  if (response.status === 403) {
-    window.location.href = "/forbidden"; // atau /403
-    throw new Error("Forbidden");
-  }
-
+  // 403 → kembalikan ke caller (halaman/SWR tangani; hindari redirect global)
   return response;
 }

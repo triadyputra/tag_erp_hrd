@@ -1,0 +1,35 @@
+{
+  "appName": "HR-TAG",
+  "packageName": "id.co.tag.hrmobile",
+  "defaultLanguage": "id-ID",
+  "category": "Business",
+  "contactEmail": "GANTI_EMAIL_SUPPORT@tag.co.id",
+  "privacyPolicyUrl": "GANTI_URL_KEBIJAKAN_PRIVASI",
+  "shortDescription": "Aplikasi HR TAG untuk karyawan — absensi, cuti, kontrak, dan informasi HR.",
+  "fullDescription": "HR-TAG adalah aplikasi mobile resmi untuk karyawan TAG. Kelola data HR, kontrak, cuti, paklaring, dan berita internal perusahaan dari satu aplikasi.",
+  "demoAccount": {
+    "username": "GANTI_AKUN_DEMO",
+    "password": "GANTI_PASSWORD_DEMO",
+    "instructions": "Login dengan akun demo, lalu buka menu utama HR."
+  },
+  "graphics": {
+    "icon512": "assets/images/tag_icon_app.png",
+    "featureGraphic": "Buat 1024x500 px",
+    "phoneScreenshotsMin": 2
+  },
+  "dataSafetyNotes": [
+    "Login credentials",
+    "Employee HR data",
+    "Profile photo (optional upload)"
+  ],
+  "backendCheckUpdate": {
+    "endpoint": "GET /MobileApp/CheckUpdate?platform=android&distribution=playstore",
+    "responseFields": {
+      "StoreUrl": "https://play.google.com/store/apps/details?id=id.co.tag.hrmobile",
+      "DownloadUrl": "kosongkan untuk build Play Store",
+      "LatestVersionCode": "integer — harus naik tiap rilis",
+      "LatestVersionName": "string mis. 1.0.1"
+    }
+  },
+  "releaseNotes_v1_0_0": "Rilis pertama HR-TAG di Google Play Store."
+}

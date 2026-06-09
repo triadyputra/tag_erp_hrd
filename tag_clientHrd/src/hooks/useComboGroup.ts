@@ -10,40 +10,93 @@ interface ComboItem {
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
+const getAuthApiBase = () => {
+  const url = process.env.NEXT_PUBLIC_API_BASE_URL_AUT
+  if (!url) {
+    throw new Error('NEXT_PUBLIC_API_BASE_URL_AUT belum diset')
+  }
+  return url.endsWith('/') ? url : `${url}/`
+}
+
+const AUTH_API = getAuthApiBase()
+
+/** Combo group/role dari API Konfigurasi (filter IdModul HRD) */
 export function useComboGroup() {
-  const [groups, setGroups] = useState<ComboItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [groups, setGroups] = useState<ComboItem[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let active = true;
+    let active = true
 
     async function fetchGroup() {
       try {
         const res = await authFetch(
-          `${BASE_URL}Combo/ComboGroup`
-        );
-        const json = await res.json();
-        console.log(json)
-        if (active && json) {
-          setGroups(json);
+          `${AUTH_API}Combo/ComboGroup?idModul=HRD`
+        )
+        const json = await res.json()
+
+        if (active && Array.isArray(json)) {
+          setGroups(
+            json.map((x: Record<string, unknown>) => ({
+              value: String(x.value ?? x.Value ?? ''),
+              title: String(x.title ?? x.Title ?? x.value ?? x.Value ?? ''),
+            }))
+          )
         }
       } catch (err) {
-        console.error("Gagal load combo group", err);
+        console.error('Gagal load combo group', err)
       } finally {
-        if (active) setLoading(false);
+        if (active) setLoading(false)
       }
     }
 
-    fetchGroup();
+    fetchGroup()
 
     return () => {
-      active = false;
-    };
-  }, []);
+      active = false
+    }
+  }, [])
 
-  return { groups, loading };
+  return { groups, loading }
 }
 
+/** Combo cabang dari API Konfigurasi — value = KdCabang (sama dengan field Cabang akun) */
+export function useComboCabangKonfigurasi() {
+  const [cabang, setCabang] = useState<ComboItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+
+    async function fetchCabang() {
+      try {
+        const res = await authFetch(`${AUTH_API}Combo/ComboCabangTag`)
+        const json = await res.json()
+
+        if (active && Array.isArray(json)) {
+          setCabang(
+            json.map((x: Record<string, unknown>) => ({
+              value: String(x.value ?? x.KdCabang ?? x.Id ?? '').trim(),
+              title: String(x.title ?? x.NmCabang ?? x.Name ?? '').trim(),
+            }))
+          )
+        }
+      } catch (err) {
+        console.error('Gagal load combo cabang konfigurasi', err)
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    fetchCabang()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  return { cabang, loading }
+}
 
 export function useComboCabang() {
   const [cabang, setCabang] = useState<ComboItem[]>([]);

@@ -1092,14 +1092,14 @@ const FormMasterKtp: React.FC<Props> = ({
                   sx={inputCompactStyle}
                 />
 
-                <TextField
+                {/* <TextField
                   fullWidth
                   size="small"
                   label="Titip Ijazah"
                   value={values.TitipIjazah ?? ''}
                   onChange={setField('TitipIjazah')}
                   sx={inputCompactStyle}
-                />
+                /> */}
 
                 <Divider sx={{ my: 1 }} />
 

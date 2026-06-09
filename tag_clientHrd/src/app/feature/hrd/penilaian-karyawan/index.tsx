@@ -26,7 +26,7 @@ import {
   Chip,
 } from '@mui/material'
 import { IconEdit, IconSearch, IconTrash } from '@tabler/icons-react'
-import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR'
 import dayjs from 'dayjs'
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -119,7 +119,8 @@ const PenilaianKaryawanListComponent = () => {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, mutate } = useAccessGatedSWR(
+    { subject: 'PenilaianKaryawan', any: true },
     ['penilaian-karyawan', filterNik, filterNama, filterCabang, filterTglAwal, filterTglAkhir, page, pageSize],
     () =>
       fetchPenilaianKaryawanList({
@@ -245,37 +246,54 @@ const PenilaianKaryawanListComponent = () => {
           />
 
           <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DatePicker
-              label="Tgl Awal"
-              format="DD-MM-YYYY"
-              value={inputTglAwal ? dayjs(inputTglAwal) : null}
-              onChange={(v) => {
-                const val = v ? v.format('YYYY-MM-DD') : null
-                setInputTglAwal(val)
-                setFilterTglAwal(val) // auto search
-                setPage(1)
-              }}
-              slotProps={{
-                textField: { size: 'small', sx: { minWidth: { xs: '100%', sm: 160 } } },
-              }}
-            />
-          </LocalizationProvider>
-
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DatePicker
-              label="Tgl Akhir"
-              format="DD-MM-YYYY"
-              value={inputTglAkhir ? dayjs(inputTglAkhir) : null}
-              onChange={(v) => {
-                const val = v ? v.format('YYYY-MM-DD') : null
-                setInputTglAkhir(val)
-                setFilterTglAkhir(val) // auto search
-                setPage(1)
-              }}
-              slotProps={{
-                textField: { size: 'small', sx: { minWidth: { xs: '100%', sm: 160 } } },
-              }}
-            />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ width: '100%' }}>
+              <DatePicker
+                format="DD-MM-YYYY"
+                value={inputTglAwal ? dayjs(inputTglAwal) : null}
+                onChange={(v) => {
+                  const val = v ? v.format('YYYY-MM-DD') : null
+                  setInputTglAwal(val)
+                  setFilterTglAwal(val)
+                  setPage(1)
+                }}
+                slotProps={{
+                  textField: (params) => ({
+                    ...params,
+                    size: 'small',
+                    fullWidth: true,
+                    placeholder: 'Tgl Awal',
+                    sx: {
+                      minWidth: { xs: '100%', sm: 220 },
+                      '& .MuiOutlinedInput-root': { height: 36 },
+                    },
+                  }),
+                  actionBar: { actions: ['clear', 'today'] },
+                }}
+              />
+              <DatePicker
+                format="DD-MM-YYYY"
+                value={inputTglAkhir ? dayjs(inputTglAkhir) : null}
+                onChange={(v) => {
+                  const val = v ? v.format('YYYY-MM-DD') : null
+                  setInputTglAkhir(val)
+                  setFilterTglAkhir(val)
+                  setPage(1)
+                }}
+                slotProps={{
+                  textField: (params) => ({
+                    ...params,
+                    size: 'small',
+                    fullWidth: true,
+                    placeholder: 'Tgl Akhir',
+                    sx: {
+                      minWidth: { xs: '100%', sm: 220 },
+                      '& .MuiOutlinedInput-root': { height: 36 },
+                    },
+                  }),
+                  actionBar: { actions: ['clear', 'today'] },
+                }}
+              />
+            </Stack>
           </LocalizationProvider>
         </Stack>
 

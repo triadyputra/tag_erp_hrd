@@ -7,6 +7,7 @@ const LIST_URL = `${BASE_URL}/GetListPenilaianKaryawan`
 const DETAIL_URL = `${BASE_URL}/GetDetailPenilaianKaryawan`
 const SAVE_URL = `${BASE_URL}/SavePenilaianKaryawan`
 const DELETE_URL = `${BASE_URL}/DeletePenilaianKaryawan`
+const KONTRAK_MAU_HABIS_URL = `${BASE_URL}/GetListKontrakMauHabis`
 
 export interface FetchPenilaianKaryawanParams {
   nik?: string
@@ -16,6 +17,22 @@ export interface FetchPenilaianKaryawanParams {
   tglAkhir?: string
   page: number
   pageSize: number
+}
+
+export interface KontrakMauHabisRow {
+  NoKtp?: string
+  NikSistag?: string
+  NmKaryawan?: string
+  Kelamin?: string
+  NmDivisi?: string
+  NmBagian?: string
+  NmJabatan?: string
+}
+
+export interface FetchKontrakMauHabisParams {
+  cabang?: string
+  bulan: string
+  tahun: number
 }
 
 export interface PenilaianKaryawanRow {
@@ -155,6 +172,29 @@ export async function savePenilaianKaryawan(payload: FormEvaluasiKontrakPayload)
   }
 
   return json
+}
+
+export async function fetchListKontrakMauHabis(params: FetchKontrakMauHabisParams) {
+  const query = new URLSearchParams({
+    cabang: params.cabang ?? '',
+    bulan: params.bulan,
+    tahun: String(params.tahun),
+  }).toString()
+
+  const res = await authFetch(`${KONTRAK_MAU_HABIS_URL}?${query}`)
+  const json = await res.json()
+
+  if (!res.ok) {
+    throw new Error(
+      json?.Metadata?.Message ||
+        json?.metadata?.message ||
+        json?.message ||
+        'Gagal mengambil data kontrak mau habis'
+    )
+  }
+
+  const list = json?.Data ?? json?.data ?? json
+  return Array.isArray(list) ? (list as KontrakMauHabisRow[]) : []
 }
 
 export async function deletePenilaianKaryawan(noTran: string) {

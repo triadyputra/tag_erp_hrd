@@ -284,6 +284,8 @@ namespace tagApiHrd.Services.Legal
             string? kdCabang,
             DateTime? tglAwal,
             DateTime? tglAkhir,
+            DateTime? pAkhirAwal,
+            DateTime? pAkhirAkhir,
             string? keputusan,
             int page,
             int pageSize)
@@ -301,6 +303,8 @@ namespace tagApiHrd.Services.Legal
                 param.Add("@kdcabang", string.IsNullOrWhiteSpace(kdCabang) ? null : kdCabang);
                 param.Add("@tglAwal", tglAwal);
                 param.Add("@tglAkhir", tglAkhir);
+                param.Add("@pAkhirAwal", pAkhirAwal);
+                param.Add("@pAkhirAkhir", pAkhirAkhir);
                 param.Add("@keputusan", string.IsNullOrWhiteSpace(keputusan) ? null : keputusan);
                 param.Add("@page", page);
                 param.Add("@pageSize", pageSize);
@@ -369,6 +373,55 @@ namespace tagApiHrd.Services.Legal
                 return ApiResponse<object>.Error(
                     ex.InnerException?.Message ?? ex.Message,
                     "500"
+                );
+            }
+        }
+
+        public async Task<List<ViewKontrakMauHabisDto>> GetListKontrakMauHabis(
+            string kdCabang,
+            string bulan,
+            int tahun)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(kdCabang))
+                    throw new ArgumentException("Kode cabang wajib diisi");
+
+                if (string.IsNullOrWhiteSpace(bulan))
+                    throw new ArgumentException("Bulan wajib diisi");
+
+                using var connection = _context.CreateConnection();
+
+                const string sql = @"
+                SELECT DISTINCT
+                    a.NOKTP           AS NoKtp,
+                    RIGHT('0000000000' + a.NIKSISTAG, 10) AS NikSistag,
+                    a.NMKARYAWAN      AS NmKaryawan,
+                    b.KELAMIN         AS Kelamin,
+                    a.NMDIVISI        AS NmDivisi,
+                    a.NMBAGIAN        AS NmBagian,
+                    a.NMJABATAN       AS NmJabatan
+                FROM HRDTAG.dbo.v_MASTERPEGAWAI a
+                LEFT JOIN HRDTAG.dbo.MST_KTP b
+                    ON a.NOKTP COLLATE DATABASE_DEFAULT = b.NOKTP COLLATE DATABASE_DEFAULT
+                WHERE a.KDCABANG = @kdCabang
+                    AND UPPER(FORMAT(a.PAKHIR, 'MMMM', 'id-ID')) = UPPER(@bulan)
+                    AND YEAR(a.PAKHIR) = @tahun
+                ORDER BY a.NMKARYAWAN";
+
+                var data = await connection.QueryAsync<ViewKontrakMauHabisDto>(
+                    sql,
+                    new { kdCabang, bulan, tahun },
+                    commandTimeout: 120
+                );
+
+                return data.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(
+                    $"Gagal mengambil data kontrak mau habis. {ex.Message}",
+                    ex
                 );
             }
         }

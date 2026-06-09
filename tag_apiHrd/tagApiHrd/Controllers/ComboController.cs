@@ -1,15 +1,12 @@
 ﻿using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Claims;
 using System.Reflection;
 using tagApi.Data;
 using tagApi.Filter;
 using tagApi.Helper;
-using tagApi.Model;
 using tagApi.Services.Combo;
 using tagApi.Services.Hrd;
 using tagApiHrd.Model.Dto;
@@ -23,29 +20,13 @@ namespace tagApi.Controllers
     [ApiController]
     public class ComboController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> userManager;
-        private readonly RoleManager<ApplicationRole> roleManager;
         private readonly IRepoCombo _comboRepository;
         private readonly IRepoHrd _hrdRepo;
 
-        public ComboController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, RoleManager<ApplicationRole> roleManager, IRepoCombo comboRepository, IRepoHrd hrdRepo)
+        public ComboController(IRepoCombo comboRepository, IRepoHrd hrdRepo)
         {
-            _context = context;
-            this.userManager = userManager;
-            this.roleManager = roleManager;
             _comboRepository = comboRepository;
             _hrdRepo = hrdRepo;
-        }
-
-        [HttpGet]
-        [Route("ComboGroup")]
-        public async Task<IActionResult> ComboGroup()
-        {
-            var Group = await roleManager.Roles.ToListAsync();
-            var listGroup = Group.Select(p => new { value = p.Name, title = p.Name });
-
-            return Ok(listGroup);
         }
 
         [HttpGet]

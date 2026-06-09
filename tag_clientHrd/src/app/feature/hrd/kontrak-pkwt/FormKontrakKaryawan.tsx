@@ -97,6 +97,18 @@ interface Props {
   ) => Promise<void>;
 }
 
+function parsePeriodeBulan(value?: string): number {
+  if (!value) return 0;
+  const months = parseInt(value, 10);
+  return Number.isNaN(months) ? 0 : months;
+}
+
+function calcPakhirFromPeriode(pawal?: string, periodeValue?: string): string {
+  const months = parsePeriodeBulan(periodeValue);
+  if (!pawal || months <= 0) return "";
+  return dayjs(pawal).add(months, "month").subtract(1, "day").format("YYYY-MM-DD");
+}
+
 const FormKontrakKaryawan: React.FC<Props> = ({
   noKontrak,
   onClose,
@@ -283,6 +295,12 @@ const FormKontrakKaryawan: React.FC<Props> = ({
 
       // if (!res) return;
       console.log(res.NMKARYAWAN)
+
+      const prevPakhir = res.PAKHIR?.substring(0, 10) || "";
+      const pawal = prevPakhir
+        ? dayjs(prevPakhir).add(1, "day").format("YYYY-MM-DD")
+        : "";
+
       // 🔥 AUTO FILL FORM
       setValues({
         ...res,
@@ -294,8 +312,9 @@ const FormKontrakKaryawan: React.FC<Props> = ({
         TGLLAHIR: res.TGLLAHIR?.substring(0, 10) || "",
         TGLMASUK: res.TGLMASUK?.substring(0, 10) || "",
         TGLINPUT: res.TGLINPUT?.substring(0, 10) || dayjs().format("YYYY-MM-DD"),
-        PAWAL: res.PAKHIR?.substring(0, 10) || "",
-        PAKHIR: res.PAKHIR?.substring(0, 10) || "",
+        PAWAL: pawal,
+        PERIODE: "",
+        PAKHIR: "",
 
         // null safe
         NOHANDPHONE: res.NOHANDPHONE ?? "",
@@ -1510,28 +1529,18 @@ const FormKontrakKaryawan: React.FC<Props> = ({
                           periodeOptions?.find((c) => c.value === values.PERIODE) ?? null
                         }
                         onChange={(_, v) => {
-                          const periode = parseInt(v?.value ?? "0"); // 🔥 FIX
+                          const periodeValue = v?.value ?? "";
 
-                          setValues((prev: any) => {
-                            let pakhir = prev.PAKHIR;
-
-                            if (prev.PAWAL && periode > 0) {
-                              pakhir = dayjs(prev.PAWAL)
-                                .add(periode, "month")
-                                .subtract(1, "day")
-                                .format("YYYY-MM-DD");
-                            }
-
-                            return {
-                              ...prev,
-                              PERIODE: v?.value ?? "",
-                              PAKHIR: pakhir,
-                            };
-                          });
+                          setValues((prev: any) => ({
+                            ...prev,
+                            PERIODE: periodeValue,
+                            PAKHIR: calcPakhirFromPeriode(prev.PAWAL, periodeValue),
+                          }));
 
                           setErrors((prev: any) => ({
                             ...prev,
                             PERIODE: "",
+                            PAKHIR: "",
                           }));
                         }}
                         isOptionEqualToValue={(o, v) => o?.value === v?.value}
@@ -1572,27 +1581,17 @@ const FormKontrakKaryawan: React.FC<Props> = ({
                         onChange={(newValue) => {
                           const val = newValue ? newValue.format("YYYY-MM-DD") : "";
 
-                          setValues((prev: any) => {
-                            let pakhir = prev.PAKHIR;
-                            const periode = parseInt(prev.PERIODE ?? "0"); // 🔥 FIX
-                            if (val && periode) {
-                              pakhir = dayjs(val)
-                                .add(Number(periode), "month")
-                                .subtract(1, "day")
-                                .format("YYYY-MM-DD");
-                            }
-
-                            return {
-                              ...prev,
-                              PAWAL: val,
-                              PAKHIR: pakhir,
-                            };
-                          });
+                          setValues((prev: any) => ({
+                            ...prev,
+                            PAWAL: val,
+                            PAKHIR: calcPakhirFromPeriode(val, prev.PERIODE),
+                          }));
 
                           // 🔥 reset error
                           setErrors((prev: any) => ({
                             ...prev,
                             PAWAL: "",
+                            PAKHIR: "",
                           }));
                         }}
                         slotProps={{

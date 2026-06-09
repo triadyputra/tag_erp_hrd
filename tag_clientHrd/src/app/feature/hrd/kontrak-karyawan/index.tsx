@@ -28,7 +28,7 @@ import {
 import { IconFilter, IconSearch } from '@tabler/icons-react'
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-import useSWR from 'swr'
+import { useAccessGatedSWR } from '@/hooks/useAccessGatedSWR'
 import { useComboCabangWith } from '@/hooks/useComboGroup'
 import { fetchKontrakAktif, printDataKaryawan } from '@/services/hrd/kontrak.service'
 import { formatDate } from '@/utils/format'
@@ -72,7 +72,8 @@ const KontrakKaryawanListComponent = () => {
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
 
-  const { data, isLoading, mutate } = useSWR(
+  const { data, isLoading, mutate } = useAccessGatedSWR(
+    { subject: 'KontrakKaryawan', any: true },
 		[
 			'kontrak',
 			filterKontrak,

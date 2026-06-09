@@ -237,5 +237,59 @@ namespace tagApiHrd.Controllers.legal
                 );
             }
         }
+
+        // =========================
+        // LIST KONTRAK MAU HABIS
+        // =========================
+        // [ApiKeyAuthorize]
+        [HttpGet("GetListKontrakMauHabis")]
+        public async Task<ActionResult<ApiResponse<List<ViewKontrakMauHabisDto>>>> GetListKontrakMauHabis(
+            string? cabang,
+            string bulan,
+            int tahun)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(bulan))
+                {
+                    return BadRequest(
+                        ApiResponse<object>.Error("Bulan wajib diisi (contoh: JUNI)", "400")
+                    );
+                }
+
+                if (tahun < 2000 || tahun > 2100)
+                {
+                    return BadRequest(
+                        ApiResponse<object>.Error("Tahun tidak valid", "400")
+                    );
+                }
+
+                var finalCabang = await _comboRepository.GetCabangAsync(cabang);
+
+                if (string.IsNullOrWhiteSpace(finalCabang))
+                {
+                    return BadRequest(
+                        ApiResponse<object>.Error("Kode cabang wajib diisi", "400")
+                    );
+                }
+
+                var data = await _repo.GetListKontrakMauHabis(
+                    finalCabang,
+                    bulan.Trim(),
+                    tahun
+                );
+
+                return Ok(ApiResponse<List<ViewKontrakMauHabisDto>>.Success(data));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(
+                    ApiResponse<object>.Error(
+                        ex.InnerException?.Message ?? ex.Message,
+                        "500"
+                    )
+                );
+            }
+        }
     }
 }
